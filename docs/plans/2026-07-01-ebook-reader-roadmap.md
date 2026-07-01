@@ -31,6 +31,9 @@ order; each assumes the previous is complete.
 
 ## Conventions used by every milestone plan
 
+- **Package manager / runtime:** Bun. Install with `bun add`, run scripts with
+  `bun run <script>`. Run tests as **`bun run test`** (invokes Vitest) — never `bun test`,
+  which is Bun's own unrelated test runner.
 - **Testing:** Vitest + React Testing Library for units/components; Playwright for the
   few end-to-end flows (upload→open, RLS isolation). TDD: failing test first.
 - **Repository pattern:** all persistence goes through `src/data/*.ts` modules. UI never

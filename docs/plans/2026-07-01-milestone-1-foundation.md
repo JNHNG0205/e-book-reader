@@ -6,7 +6,7 @@
 
 **Architecture:** React + Vite SPA talking to Supabase (Auth + Postgres + Storage). UI never touches the Supabase client directly; all persistence goes through repository modules in `src/data/`. Postgres Row-Level Security enforces that each user only reads/writes their own rows and files.
 
-**Tech Stack:** React 18, Vite 5, TypeScript 5, Tailwind CSS 3, `@supabase/supabase-js` 2, `react-router-dom` 6, Vitest + React Testing Library.
+**Tech Stack:** Bun (package manager + runtime), React 18, Vite 5, TypeScript 5, Tailwind CSS 3, `@supabase/supabase-js` 2, `react-router-dom` 6, Vitest + React Testing Library.
 
 ## Global Constraints
 
@@ -33,14 +33,16 @@
 
 Run:
 ```bash
-npm create vite@latest . -- --template react-ts
-npm install
-npm install @supabase/supabase-js react-router-dom
-npm install -D tailwindcss postcss autoprefixer vitest jsdom \
+bun create vite . --template react-ts
+bun install
+bun add @supabase/supabase-js react-router-dom
+bun add -d tailwindcss postcss autoprefixer vitest jsdom \
   @testing-library/react @testing-library/jest-dom @testing-library/user-event
-npx tailwindcss init -p
+bunx tailwindcss init -p
 ```
-Expected: `node_modules/` populated, `tailwind.config.js` + `postcss.config.js` created. (If `npm create vite` refuses because the dir is non-empty, choose "Ignore files and continue" / rerun with `--force`; it preserves `docs/` and `.git/`.)
+Expected: `node_modules/` populated, `bun.lock` created, `tailwind.config.js` + `postcss.config.js` created. (If `bun create vite` refuses because the dir is non-empty, keep the existing files and continue — it must preserve `docs/`, `.git/`, `.gitignore`, and `.superpowers/`. Do NOT delete anything under `docs/`.)
+
+**Bun note:** the `package.json` `test` script runs Vitest, so always invoke tests as **`bun run test`** — never `bun test`, which is Bun's own separate test runner and will not run Vitest.
 
 - [ ] **Step 2: Configure Tailwind**
 
@@ -139,7 +141,7 @@ test('renders the app title', () => {
 
 - [ ] **Step 6: Run the test — verify it passes**
 
-Run: `npm test`
+Run: `bun run test`
 Expected: 1 passing test.
 
 - [ ] **Step 7: Commit**
@@ -233,7 +235,7 @@ test('exports a configured supabase client with auth', async () => {
 
 - [ ] **Step 3: Run test — verify it fails**
 
-Run: `npm test src/lib/supabase.test.ts`
+Run: `bun run test src/lib/supabase.test.ts`
 Expected: FAIL — cannot find module `./supabase`.
 
 - [ ] **Step 4: Implement the client**
@@ -254,7 +256,7 @@ export const supabase = createClient(url, anonKey)
 
 - [ ] **Step 5: Run test — verify it passes**
 
-Run: `npm test src/lib/supabase.test.ts`
+Run: `bun run test src/lib/supabase.test.ts`
 Expected: PASS.
 
 - [ ] **Step 6: Commit**
@@ -465,7 +467,7 @@ test('resolves to logged-in when a session exists', async () => {
 
 - [ ] **Step 2: Run test — verify it fails**
 
-Run: `npm test src/auth/SessionProvider.test.tsx`
+Run: `bun run test src/auth/SessionProvider.test.tsx`
 Expected: FAIL — modules do not exist.
 
 - [ ] **Step 3: Implement the context + provider**
@@ -512,7 +514,7 @@ export function useSession() {
 
 - [ ] **Step 4: Run test — verify it passes**
 
-Run: `npm test src/auth/SessionProvider.test.tsx`
+Run: `bun run test src/auth/SessionProvider.test.tsx`
 Expected: PASS (2 tests).
 
 - [ ] **Step 5: Commit**
@@ -573,7 +575,7 @@ test('shows an error message when login fails', async () => {
 
 - [ ] **Step 2: Run test — verify it fails**
 
-Run: `npm test src/auth/LoginPage.test.tsx`
+Run: `bun run test src/auth/LoginPage.test.tsx`
 Expected: FAIL — `./LoginPage` not found.
 
 - [ ] **Step 3: Implement the page**
@@ -645,7 +647,7 @@ export function LoginPage() {
 
 - [ ] **Step 4: Run test — verify it passes**
 
-Run: `npm test src/auth/LoginPage.test.tsx`
+Run: `bun run test src/auth/LoginPage.test.tsx`
 Expected: PASS (2 tests).
 
 - [ ] **Step 5: Commit**
@@ -700,7 +702,7 @@ test('renders children when logged in', () => {
 
 - [ ] **Step 2: Run test — verify it fails**
 
-Run: `npm test src/components/ProtectedRoute.test.tsx`
+Run: `bun run test src/components/ProtectedRoute.test.tsx`
 Expected: FAIL — `./ProtectedRoute` not found.
 
 - [ ] **Step 3: Implement ProtectedRoute and AppHeader**
@@ -737,7 +739,7 @@ export function AppHeader() {
 
 - [ ] **Step 4: Run test — verify it passes**
 
-Run: `npm test src/components/ProtectedRoute.test.tsx`
+Run: `bun run test src/components/ProtectedRoute.test.tsx`
 Expected: PASS (2 tests).
 
 - [ ] **Step 5: Wire routing in App and main**
@@ -789,8 +791,8 @@ createRoot(document.getElementById('root')!).render(
 
 - [ ] **Step 6: Run the whole suite — verify green**
 
-Run: `npm test`
-Expected: all tests pass. Also run `npm run build` — expect a clean type-check + build.
+Run: `bun run test`
+Expected: all tests pass. Also run `bun run build` — expect a clean type-check + build.
 
 - [ ] **Step 7: Commit**
 
@@ -871,7 +873,7 @@ test('renameBook updates the title for the given id', async () => {
 
 - [ ] **Step 2: Run tests — verify they fail**
 
-Run: `npm test src/data/books.test.ts`
+Run: `bun run test src/data/books.test.ts`
 Expected: FAIL — `./books` not found.
 
 - [ ] **Step 3: Implement the repository**
@@ -941,7 +943,7 @@ export async function deleteBook(id: string): Promise<void> {
 
 - [ ] **Step 4: Run tests — verify they pass**
 
-Run: `npm test src/data/books.test.ts`
+Run: `bun run test src/data/books.test.ts`
 Expected: PASS (3 tests).
 
 - [ ] **Step 5: Commit**
@@ -1011,7 +1013,7 @@ test('uploads a selected pdf file with format inferred from extension', async ()
 
 - [ ] **Step 2: Run test — verify it fails**
 
-Run: `npm test src/pages/LibraryPage.test.tsx`
+Run: `bun run test src/pages/LibraryPage.test.tsx`
 Expected: FAIL — placeholder `LibraryPage` has no such behavior.
 
 - [ ] **Step 3: Implement BookCard**
@@ -1170,12 +1172,12 @@ export function LibraryPage() {
 
 - [ ] **Step 6: Run test — verify it passes**
 
-Run: `npm test src/pages/LibraryPage.test.tsx`
+Run: `bun run test src/pages/LibraryPage.test.tsx`
 Expected: PASS (2 tests).
 
 - [ ] **Step 7: Run the full suite + build**
 
-Run: `npm test && npm run build`
+Run: `bun run test && bun run build`
 Expected: all tests pass; clean build.
 
 - [ ] **Step 8: Commit**
@@ -1193,7 +1195,7 @@ git commit -m "feat: add library page with upload, grid, rename, and delete"
 - Create: `docs/guides/milestone-1-manual-test.md`
 
 **Interfaces:**
-- Consumes: a running app (`npm run dev`) + configured Supabase project.
+- Consumes: a running app (`bun run dev`) + configured Supabase project.
 - Produces: a written, repeatable manual acceptance check proving RLS isolation.
 
 - [ ] **Step 1: Write the manual acceptance checklist**
@@ -1202,7 +1204,7 @@ Create `docs/guides/milestone-1-manual-test.md`:
 ```markdown
 # Milestone 1 — manual acceptance
 
-Prereq: `.env.local` set, migration applied (see supabase-setup.md), `npm run dev`.
+Prereq: `.env.local` set, migration applied (see supabase-setup.md), `bun run dev`.
 
 1. Visit the app → you see the Log in page.
 2. Sign up as user A (a@test.com / secret1). You land on an empty library.
@@ -1218,7 +1220,7 @@ Prereq: `.env.local` set, migration applied (see supabase-setup.md), `npm run de
 
 - [ ] **Step 2: Execute the checklist against the running app**
 
-Run: `npm run dev`, then follow every step in the checklist.
+Run: `bun run dev`, then follow every step in the checklist.
 Expected: all 8 steps pass; step 7 in particular shows user B cannot see user A's books.
 
 - [ ] **Step 3: Commit**
