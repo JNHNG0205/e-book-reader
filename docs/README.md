@@ -13,3 +13,7 @@ Project documentation, organized by category.
 
 ### Specs
 - [2026-07-01 — E-Book Reader](./specs/2026-07-01-ebook-reader-design.md)
+
+### Plans
+- [2026-07-01 — Roadmap (milestones)](./plans/2026-07-01-ebook-reader-roadmap.md)
+- [2026-07-01 — Milestone 1: Foundation](./plans/2026-07-01-milestone-1-foundation.md)
