@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "e-book-reader-scaffold",
+      "name": "e-book-reader",
       "dependencies": {
         "@supabase/supabase-js": "^2.110.0",
         "react": "^19.2.7",
