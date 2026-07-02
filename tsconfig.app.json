@@ -16,13 +16,11 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
-    /* Path aliases */
-    "ignoreDeprecations": "6.0",
-    "baseUrl": ".",
+    /* Path aliases (TS6: paths resolve relative to this config, no baseUrl needed) */
     "paths": {
-      "@frontend/*": ["src/frontend/*"],
-      "@backend/*": ["src/backend/*"],
-      "@shared/*": ["src/shared/*"]
+      "@frontend/*": ["./src/frontend/*"],
+      "@backend/*": ["./src/backend/*"],
+      "@shared/*": ["./src/shared/*"]
     },
 
     /* Type checking */
