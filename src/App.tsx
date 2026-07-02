@@ -1,3 +1,17 @@
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { ProtectedRoute } from './components/ProtectedRoute'
+import { AppHeader } from './components/AppHeader'
+import { LibraryPage } from './pages/LibraryPage'
+
 export default function App() {
-  return <h1 className="text-2xl font-bold">E-Book Reader</h1>
+  return (
+    <BrowserRouter>
+      <ProtectedRoute>
+        <AppHeader />
+        <Routes>
+          <Route path="/" element={<LibraryPage />} />
+        </Routes>
+      </ProtectedRoute>
+    </BrowserRouter>
+  )
 }
