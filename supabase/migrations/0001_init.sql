@@ -74,7 +74,7 @@ begin
     execute format($f$
       create policy "own_select_%1$s" on public.%1$s for select using (auth.uid() = user_id);
       create policy "own_insert_%1$s" on public.%1$s for insert with check (auth.uid() = user_id);
-      create policy "own_update_%1$s" on public.%1$s for update using (auth.uid() = user_id);
+      create policy "own_update_%1$s" on public.%1$s for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
       create policy "own_delete_%1$s" on public.%1$s for delete using (auth.uid() = user_id);
     $f$, t);
   end loop;
@@ -89,6 +89,9 @@ insert into storage.buckets (id, name, public)
 create policy "own_read_books_files" on storage.objects for select
   using (bucket_id = 'books' and auth.uid()::text = (storage.foldername(name))[1]);
 create policy "own_write_books_files" on storage.objects for insert
+  with check (bucket_id = 'books' and auth.uid()::text = (storage.foldername(name))[1]);
+create policy "own_update_books_files" on storage.objects for update
+  using (bucket_id = 'books' and auth.uid()::text = (storage.foldername(name))[1])
   with check (bucket_id = 'books' and auth.uid()::text = (storage.foldername(name))[1]);
 create policy "own_delete_books_files" on storage.objects for delete
   using (bucket_id = 'books' and auth.uid()::text = (storage.foldername(name))[1]);
