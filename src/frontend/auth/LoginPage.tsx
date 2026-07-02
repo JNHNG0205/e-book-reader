@@ -10,6 +10,7 @@ export function LoginPage() {
   const [sent, setSent] = useState(false)
   const [sentEmail, setSentEmail] = useState('')
   const [resendMessage, setResendMessage] = useState<string | null>(null)
+  const [resending, setResending] = useState(false)
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -40,11 +41,16 @@ export function LoginPage() {
   async function onResend() {
     setError(null)
     setResendMessage(null)
-    const { error: resendError } = await supabase.auth.resend({ type: 'signup', email: sentEmail })
-    if (resendError) {
-      setError(resendError.message)
-    } else {
-      setResendMessage('Confirmation email resent')
+    setResending(true)
+    try {
+      const { error: resendError } = await supabase.auth.resend({ type: 'signup', email: sentEmail })
+      if (resendError) {
+        setError(resendError.message)
+      } else {
+        setResendMessage('Confirmation email resent')
+      }
+    } finally {
+      setResending(false)
     }
   }
 
@@ -68,7 +74,8 @@ export function LoginPage() {
         <button
           type="button"
           onClick={onResend}
-          className="mb-2 w-full rounded border py-2 text-sm"
+          disabled={resending}
+          className="mb-2 w-full rounded border py-2 text-sm disabled:opacity-50"
         >
           Resend
         </button>
