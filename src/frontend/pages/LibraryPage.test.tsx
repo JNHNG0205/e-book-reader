@@ -9,7 +9,7 @@ const { listBooks, uploadBook, deleteBook, renameBook } = vi.hoisted(() => ({
   deleteBook: vi.fn(),
   renameBook: vi.fn(),
 }))
-vi.mock('../data/books', () => ({ listBooks, uploadBook, deleteBook, renameBook }))
+vi.mock('@backend/data/books', () => ({ listBooks, uploadBook, deleteBook, renameBook }))
 
 import { LibraryPage } from './LibraryPage'
 

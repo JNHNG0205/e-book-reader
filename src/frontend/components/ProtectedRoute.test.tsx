@@ -3,8 +3,8 @@ import { expect, test, vi } from 'vitest'
 
 // vi.mock is hoisted; create the mock fn via vi.hoisted() so the factory can use it.
 const { useSession } = vi.hoisted(() => ({ useSession: vi.fn() }))
-vi.mock('../auth/useSession', () => ({ useSession: () => useSession() }))
-vi.mock('../auth/LoginPage', () => ({ LoginPage: () => <div>login page</div> }))
+vi.mock('@frontend/auth/useSession', () => ({ useSession: () => useSession() }))
+vi.mock('@frontend/auth/LoginPage', () => ({ LoginPage: () => <div>login page</div> }))
 
 import { ProtectedRoute } from './ProtectedRoute'
 

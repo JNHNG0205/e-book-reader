@@ -1,4 +1,4 @@
-import type { Book } from '../types'
+import type { Book } from '@shared/types'
 
 export function BookCard({
   book, onRename, onDelete,

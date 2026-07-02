@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase'
+import { supabase } from '@backend/supabase'
 
 export function AppHeader() {
   return (

@@ -6,7 +6,7 @@ const { getUser, from, storageFrom } = vi.hoisted(() => ({
   from: vi.fn(),
   storageFrom: vi.fn(),
 }))
-vi.mock('../lib/supabase', () => ({
+vi.mock('@backend/supabase', () => ({
   supabase: { auth: { getUser }, from, storage: { from: storageFrom } },
 }))
 

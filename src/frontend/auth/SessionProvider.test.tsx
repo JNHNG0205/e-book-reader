@@ -6,7 +6,7 @@ const { onAuthStateChange, getSession } = vi.hoisted(() => ({
   getSession: vi.fn(),
 }))
 
-vi.mock('../lib/supabase', () => ({
+vi.mock('@backend/supabase', () => ({
   supabase: { auth: { getSession, onAuthStateChange } },
 }))
 

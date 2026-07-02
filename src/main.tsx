@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import App from './App.tsx'
-import { SessionProvider } from './auth/SessionProvider'
+import App from '@frontend/App'
+import { SessionProvider } from '@frontend/auth/SessionProvider'
 import './index.css'
 
 createRoot(document.getElementById('root')!).render(

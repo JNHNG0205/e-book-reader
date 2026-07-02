@@ -1,5 +1,5 @@
 import type { ChangeEvent } from 'react'
-import type { BookFormat } from '../types'
+import type { BookFormat } from '@shared/types'
 
 function inferFormat(filename: string): BookFormat | null {
   const lower = filename.toLowerCase()

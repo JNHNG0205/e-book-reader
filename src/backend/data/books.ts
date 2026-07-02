@@ -1,5 +1,5 @@
-import { supabase } from '../lib/supabase'
-import type { Book, BookFormat } from '../types'
+import { supabase } from '@backend/supabase'
+import type { Book, BookFormat } from '@shared/types'
 
 async function requireUserId(): Promise<string> {
   const { data } = await supabase.auth.getUser()

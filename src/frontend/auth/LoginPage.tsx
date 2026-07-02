@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase } from '@backend/supabase'
 
 export function LoginPage() {
   const [mode, setMode] = useState<'login' | 'signup'>('login')

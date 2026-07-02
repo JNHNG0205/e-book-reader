@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { Book, BookFormat } from '../types'
-import { listBooks, uploadBook, renameBook, deleteBook } from '../data/books'
-import { BookCard } from '../components/BookCard'
-import { UploadButton } from '../components/UploadButton'
+import type { Book, BookFormat } from '@shared/types'
+import { listBooks, uploadBook, renameBook, deleteBook } from '@backend/data/books'
+import { BookCard } from '@frontend/components/BookCard'
+import { UploadButton } from '@frontend/components/UploadButton'
 
 export function LibraryPage() {
   const [books, setBooks] = useState<Book[]>([])

@@ -16,6 +16,15 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* Path aliases */
+    "ignoreDeprecations": "6.0",
+    "baseUrl": ".",
+    "paths": {
+      "@frontend/*": ["src/frontend/*"],
+      "@backend/*": ["src/backend/*"],
+      "@shared/*": ["src/shared/*"]
+    },
+
     /* Type checking */
     "strict": true,
 

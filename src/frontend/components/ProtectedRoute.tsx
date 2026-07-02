@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
-import { useSession } from '../auth/useSession'
-import { LoginPage } from '../auth/LoginPage'
+import { useSession } from '@frontend/auth/useSession'
+import { LoginPage } from '@frontend/auth/LoginPage'
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { session, loading } = useSession()
