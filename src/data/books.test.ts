@@ -10,7 +10,7 @@ vi.mock('../lib/supabase', () => ({
   supabase: { auth: { getUser }, from, storage: { from: storageFrom } },
 }))
 
-import { listBooks, uploadBook, renameBook } from './books'
+import { listBooks, uploadBook, renameBook, deleteBook } from './books'
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -48,4 +48,21 @@ test('renameBook updates the title for the given id', async () => {
   await renameBook('b1', 'New Title')
   expect(update).toHaveBeenCalledWith({ title: 'New Title' })
   expect(eq).toHaveBeenCalledWith('id', 'b1')
+})
+
+test('deleteBook removes the storage object and deletes the row', async () => {
+  const single = vi.fn().mockResolvedValue({ data: { storage_path: 'u1/abc.pdf' }, error: null })
+  const selectEq = vi.fn().mockReturnValue({ single })
+  const deleteEq = vi.fn().mockResolvedValue({ error: null })
+  from
+    .mockReturnValueOnce({ select: () => ({ eq: selectEq }) })
+    .mockReturnValueOnce({ delete: () => ({ eq: deleteEq }) })
+
+  const remove = vi.fn().mockResolvedValue({ error: null })
+  storageFrom.mockReturnValue({ remove })
+
+  await deleteBook('b1')
+
+  expect(remove).toHaveBeenCalledWith(['u1/abc.pdf'])
+  expect(deleteEq).toHaveBeenCalledWith('id', 'b1')
 })

@@ -21,7 +21,7 @@ export async function uploadBook(
   meta: { title: string; author?: string; format: BookFormat },
 ): Promise<Book> {
   const userId = await requireUserId()
-  const ext = meta.format === 'pdf' ? 'pdf' : 'epub'
+  const ext = meta.format
   const storagePath = `${userId}/${crypto.randomUUID()}.${ext}`
 
   const { error: upErr } = await supabase.storage.from('books').upload(storagePath, file)
@@ -52,7 +52,8 @@ export async function deleteBook(id: string): Promise<void> {
     .from('books').select('storage_path').eq('id', id).single()
   if (readErr) throw readErr
   if (book?.storage_path) {
-    await supabase.storage.from('books').remove([book.storage_path])
+    const { error: storageErr } = await supabase.storage.from('books').remove([book.storage_path])
+    if (storageErr) throw storageErr
   }
   const { error } = await supabase.from('books').delete().eq('id', id)
   if (error) throw error
