@@ -7,20 +7,80 @@ export function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [sent, setSent] = useState(false)
+  const [sentEmail, setSentEmail] = useState('')
+  const [resendMessage, setResendMessage] = useState<string | null>(null)
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
     setBusy(true)
     try {
-      const { error } =
-        mode === 'login'
-          ? await supabase.auth.signInWithPassword({ email, password })
-          : await supabase.auth.signUp({ email, password })
-      if (error) setError(error.message)
+      if (mode === 'login') {
+        const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
+        if (authError) setError(authError.message)
+      } else {
+        const { data, error: authError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { emailRedirectTo: window.location.origin },
+        })
+        if (authError) {
+          setError(authError.message)
+        } else if (!data.session) {
+          setSentEmail(email)
+          setSent(true)
+        }
+      }
     } finally {
       setBusy(false)
     }
+  }
+
+  async function onResend() {
+    setError(null)
+    setResendMessage(null)
+    const { error: resendError } = await supabase.auth.resend({ type: 'signup', email: sentEmail })
+    if (resendError) {
+      setError(resendError.message)
+    } else {
+      setResendMessage('Confirmation email resent')
+    }
+  }
+
+  function onBackToLogin() {
+    setSent(false)
+    setMode('login')
+    setError(null)
+    setResendMessage(null)
+  }
+
+  if (sent) {
+    return (
+      <div className="mx-auto mt-24 max-w-sm p-6">
+        <h1 className="mb-4 text-2xl font-bold">Check your email</h1>
+        <p className="mb-6 text-sm">
+          We sent a confirmation link to <strong>{sentEmail}</strong>. Click it to activate your
+          account, then log in.
+        </p>
+        {error && <p role="alert" className="mb-4 text-sm text-red-600">{error}</p>}
+        {resendMessage && <p className="mb-4 text-sm text-green-600">{resendMessage}</p>}
+        <button
+          type="button"
+          onClick={onResend}
+          className="mb-2 w-full rounded border py-2 text-sm"
+        >
+          Resend
+        </button>
+        <button
+          type="button"
+          onClick={onBackToLogin}
+          className="mt-2 text-sm text-blue-600"
+        >
+          Back to log in
+        </button>
+      </div>
+    )
   }
 
   return (
@@ -54,6 +114,7 @@ export function LoginPage() {
         </button>
       </form>
       <button
+        type="button"
         onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
         className="mt-4 text-sm text-blue-600"
       >
