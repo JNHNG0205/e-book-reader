@@ -11,6 +11,7 @@ export function LibraryPage() {
 
   const refresh = useCallback(async () => {
     try {
+      setError(null)
       setBooks(await listBooks())
     } catch (e) {
       setError((e as Error).message)
@@ -22,16 +23,28 @@ export function LibraryPage() {
   useEffect(() => { void refresh() }, [refresh])
 
   async function handleUpload(file: File, meta: { title: string; format: BookFormat }) {
-    await uploadBook(file, meta)
-    await refresh()
+    try {
+      await uploadBook(file, meta)
+      await refresh()
+    } catch (e) {
+      setError((e as Error).message)
+    }
   }
   async function handleRename(id: string, title: string) {
-    await renameBook(id, title)
-    await refresh()
+    try {
+      await renameBook(id, title)
+      await refresh()
+    } catch (e) {
+      setError((e as Error).message)
+    }
   }
   async function handleDelete(id: string) {
-    await deleteBook(id)
-    await refresh()
+    try {
+      await deleteBook(id)
+      await refresh()
+    } catch (e) {
+      setError((e as Error).message)
+    }
   }
 
   return (
