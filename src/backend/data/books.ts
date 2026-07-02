@@ -1,11 +1,6 @@
 import { supabase } from '@backend/supabase'
 import type { Book, BookFormat } from '@shared/types'
-
-async function requireUserId(): Promise<string> {
-  const { data } = await supabase.auth.getUser()
-  if (!data.user) throw new Error('Not authenticated')
-  return data.user.id
-}
+import { requireUserId } from './currentUser'
 
 export async function listBooks(): Promise<Book[]> {
   const { data, error } = await supabase
@@ -48,6 +43,18 @@ export async function uploadBook(
 export async function renameBook(id: string, title: string): Promise<void> {
   const { error } = await supabase.from('books').update({ title }).eq('id', id)
   if (error) throw error
+}
+
+export async function getBook(id: string): Promise<Book> {
+  const { data, error } = await supabase.from('books').select('*').eq('id', id).single()
+  if (error) throw error
+  return data as Book
+}
+
+export async function getBookFileUrl(storagePath: string): Promise<string> {
+  const { data, error } = await supabase.storage.from('books').createSignedUrl(storagePath, 3600)
+  if (error) throw error
+  return data.signedUrl
 }
 
 export async function deleteBook(id: string): Promise<void> {
