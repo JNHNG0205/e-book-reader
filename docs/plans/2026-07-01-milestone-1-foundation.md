@@ -431,8 +431,12 @@ Create `src/auth/SessionProvider.test.tsx`:
 import { render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, expect, test, vi } from 'vitest'
 
-const onAuthStateChange = vi.fn()
-const getSession = vi.fn()
+// vi.mock is hoisted above const declarations, so mock fns must be created
+// inside vi.hoisted() to be referenceable in the factory.
+const { onAuthStateChange, getSession } = vi.hoisted(() => ({
+  onAuthStateChange: vi.fn(),
+  getSession: vi.fn(),
+}))
 vi.mock('../lib/supabase', () => ({
   supabase: { auth: { getSession, onAuthStateChange } },
 }))
@@ -544,8 +548,12 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, test, vi } from 'vitest'
 
-const signInWithPassword = vi.fn()
-const signUp = vi.fn()
+// vi.mock is hoisted above const declarations, so mock fns must be created
+// inside vi.hoisted() to be referenceable in the factory.
+const { signInWithPassword, signUp } = vi.hoisted(() => ({
+  signInWithPassword: vi.fn(),
+  signUp: vi.fn(),
+}))
 vi.mock('../lib/supabase', () => ({
   supabase: { auth: { signInWithPassword, signUp } },
 }))
@@ -680,7 +688,8 @@ Create `src/components/ProtectedRoute.test.tsx`:
 import { render, screen } from '@testing-library/react'
 import { expect, test, vi } from 'vitest'
 
-const useSession = vi.fn()
+// vi.mock is hoisted; create the mock fn via vi.hoisted() so the factory can use it.
+const { useSession } = vi.hoisted(() => ({ useSession: vi.fn() }))
 vi.mock('../auth/useSession', () => ({ useSession: () => useSession() }))
 vi.mock('../auth/LoginPage', () => ({ LoginPage: () => <div>login page</div> }))
 
@@ -823,9 +832,12 @@ Create `src/data/books.test.ts`:
 ```ts
 import { beforeEach, expect, test, vi } from 'vitest'
 
-const getUser = vi.fn()
-const from = vi.fn()
-const storageFrom = vi.fn()
+// vi.mock is hoisted; create mock fns via vi.hoisted() so the factory can use them.
+const { getUser, from, storageFrom } = vi.hoisted(() => ({
+  getUser: vi.fn(),
+  from: vi.fn(),
+  storageFrom: vi.fn(),
+}))
 vi.mock('../lib/supabase', () => ({
   supabase: { auth: { getUser }, from, storage: { from: storageFrom } },
 }))
@@ -974,10 +986,13 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, test, vi } from 'vitest'
 
-const listBooks = vi.fn()
-const uploadBook = vi.fn()
-const deleteBook = vi.fn()
-const renameBook = vi.fn()
+// vi.mock is hoisted; create mock fns via vi.hoisted() so the factory can use them.
+const { listBooks, uploadBook, deleteBook, renameBook } = vi.hoisted(() => ({
+  listBooks: vi.fn(),
+  uploadBook: vi.fn(),
+  deleteBook: vi.fn(),
+  renameBook: vi.fn(),
+}))
 vi.mock('../data/books', () => ({ listBooks, uploadBook, deleteBook, renameBook }))
 
 import { LibraryPage } from './LibraryPage'
