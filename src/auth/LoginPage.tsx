@@ -12,12 +12,15 @@ export function LoginPage() {
     e.preventDefault()
     setError(null)
     setBusy(true)
-    const { error } =
-      mode === 'login'
-        ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password })
-    setBusy(false)
-    if (error) setError(error.message)
+    try {
+      const { error } =
+        mode === 'login'
+          ? await supabase.auth.signInWithPassword({ email, password })
+          : await supabase.auth.signUp({ email, password })
+      if (error) setError(error.message)
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (

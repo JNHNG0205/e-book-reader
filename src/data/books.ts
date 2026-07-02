@@ -38,7 +38,10 @@ export async function uploadBook(
     })
     .select()
     .single()
-  if (error) throw error
+  if (error) {
+    await supabase.storage.from('books').remove([storagePath])
+    throw error
+  }
   return data as Book
 }
 
