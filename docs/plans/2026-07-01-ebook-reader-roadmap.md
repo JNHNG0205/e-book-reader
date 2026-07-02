@@ -10,7 +10,7 @@ order; each assumes the previous is complete.
 |---|---|---|---|
 | 1 | **Foundation** | Sign up / log in, upload a PDF/EPUB, see it on your private shelf, rename/delete. Data isolated per user via RLS. | [`2026-07-01-milestone-1-foundation.md`](./2026-07-01-milestone-1-foundation.md) |
 | 1.5 | **Signup confirmation UX** | After signup with email confirmation on, show an inline "check your email" state (address + resend + back-to-login); `emailRedirectTo` so the link logs them back in. | inline brief (`.superpowers/sdd/task-m1.5-brief.md`) |
-| 2 | **PDF reader** | Open a PDF, exact-page render, page nav, zoom, progress + resume. | _written after M1_ |
+| 2 | **PDF reader** | Open a PDF, exact-page render, page nav, zoom, progress + resume. | [`2026-07-02-milestone-2-pdf-reader.md`](./2026-07-02-milestone-2-pdf-reader.md) |
 | 3 | **EPUB reader** | Open an EPUB, reflowable render, font/theme + dark mode, TOC, progress + resume. Shared reader chrome unified with M2. | _written after M2_ |
 | 4 | **Highlights + bookmarks** | Highlight pen (preset colors) over text, notes, highlights panel, bookmarks. Unified across both formats. | _written after M3_ |
 | 5 | **In-book search** | Search within the open book for both formats. | _written after M4_ |
