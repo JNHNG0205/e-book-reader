@@ -29,6 +29,28 @@ order; each assumes the previous is complete.
 - Stop points are real: after M1 you have a working (online-only) library; after M5 a
   full-featured online reader; M6 adds offline.
 
+## Folder structure (frontend / backend / shared)
+
+The app is split into clear layers with path aliases (configured in `vite.config.ts`
+and `tsconfig.app.json`):
+
+```
+src/
+  main.tsx, index.css, test/setup.ts   # app bootstrap (stay at src root)
+  frontend/    # all UI — components/, pages/, auth/   → alias @frontend
+  backend/     # data/server-side — supabase.ts, data/ (repositories)  → alias @backend
+  shared/      # types.ts (domain types used by both)  → alias @shared
+supabase/migrations/                    # SQL schema + RLS
+```
+
+- **Import across layers via the alias** (`@backend/data/books`, `@shared/types`,
+  `@frontend/auth/useSession`); relative imports are fine within the same folder.
+- **Test mocks must use the same alias path** as the import
+  (`vi.mock('@backend/data/books', …)`), or the mock silently won't apply.
+- New backend data-access lives in `src/backend/data/*` (one repository per domain:
+  `books.ts`, later `highlights.ts`, `bookmarks.ts`, `progress.ts`). New UI lives under
+  `src/frontend/*`. Shared types go in `src/shared/types.ts`.
+
 ## Conventions used by every milestone plan
 
 - **Package manager / runtime:** Bun. Install with `bun add`, run scripts with
