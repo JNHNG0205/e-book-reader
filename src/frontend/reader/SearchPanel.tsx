@@ -1,12 +1,12 @@
 import { useState, type FormEvent } from 'react'
-import type { SearchResult } from './searchTypes'
+import { SEARCH_LIMIT, type SearchResult } from './searchTypes'
 
 interface SearchPanelProps {
   onSearch: (query: string) => Promise<SearchResult[]>
   onJump: (result: SearchResult) => void
 }
 
-type Status = 'idle' | 'searching' | 'done'
+type Status = 'idle' | 'searching' | 'done' | 'error'
 
 export function SearchPanel({ onSearch, onJump }: SearchPanelProps) {
   const [query, setQuery] = useState('')
@@ -17,11 +17,13 @@ export function SearchPanel({ onSearch, onJump }: SearchPanelProps) {
     e.preventDefault()
     const q = query.trim()
     if (!q || status === 'searching') return
+    setResults([]) // clear the previous query's rows while the new search runs
     setStatus('searching')
     try {
       setResults(await onSearch(q))
-    } finally {
       setStatus('done')
+    } catch {
+      setStatus('error')
     }
   }
 
@@ -41,10 +43,14 @@ export function SearchPanel({ onSearch, onJump }: SearchPanelProps) {
       </form>
       <div className="mt-2">
         {status === 'searching' && <p className="text-sm text-gray-500">Searching…</p>}
+        {status === 'error' && <p className="text-sm text-red-600">Search failed. Try again.</p>}
         {status === 'done' && results.length === 0 && (
           <p className="text-sm text-gray-500">No results.</p>
         )}
         {status === 'idle' && <p className="text-sm text-gray-400">Search this book.</p>}
+        {status === 'done' && results.length >= SEARCH_LIMIT && (
+          <p className="mb-1 text-xs text-gray-400">Showing the first {SEARCH_LIMIT} matches.</p>
+        )}
         <ul className="flex flex-col gap-1">
           {results.map((r) => (
             <li key={r.id}>

@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 import { SearchPanel } from './SearchPanel'
-import type { SearchResult } from './searchTypes'
+import { SEARCH_LIMIT, type SearchResult } from './searchTypes'
 
 const results: SearchResult[] = [
   { id: '1', location: 'epubcfi(/6/4!/4/2)', excerpt: '…the whale surfaced…', label: 'Ch. 1' },
@@ -40,4 +40,21 @@ test('does not search a blank query', async () => {
   render(<SearchPanel onSearch={onSearch} onJump={() => {}} />)
   await userEvent.click(screen.getByRole('button', { name: /search/i }))
   expect(onSearch).not.toHaveBeenCalled()
+})
+
+test('notes when results are truncated to the limit', async () => {
+  const many = Array.from({ length: SEARCH_LIMIT }, (_, i) => (
+    { id: String(i), location: String(i), excerpt: `match ${i}` }
+  ))
+  render(<SearchPanel onSearch={vi.fn().mockResolvedValue(many)} onJump={() => {}} />)
+  await userEvent.type(screen.getByRole('textbox'), 'e')
+  await userEvent.click(screen.getByRole('button', { name: /search/i }))
+  expect(await screen.findByText(new RegExp(`first ${SEARCH_LIMIT} matches`, 'i'))).toBeInTheDocument()
+})
+
+test('shows an error state when the search fails', async () => {
+  render(<SearchPanel onSearch={vi.fn().mockRejectedValue(new Error('boom'))} onJump={() => {}} />)
+  await userEvent.type(screen.getByRole('textbox'), 'whale')
+  await userEvent.click(screen.getByRole('button', { name: /search/i }))
+  expect(await screen.findByText(/search failed/i)).toBeInTheDocument()
 })

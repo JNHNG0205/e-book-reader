@@ -4,7 +4,7 @@ import {
 import ePub, { type Rendition } from 'epubjs'
 import { flattenToc, type TocItem } from './epubToc'
 import { colorValue } from './highlightColors'
-import type { SearchResult } from './searchTypes'
+import { SEARCH_LIMIT, type SearchResult } from './searchTypes'
 
 export type EpubTheme = 'light' | 'dark' | 'sepia'
 
@@ -366,7 +366,6 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
       const q = query.trim()
       if (!book || !q) return []
       const out: SearchResult[] = []
-      const LIMIT = 200
       const items = (book.spine as unknown as { spineItems: Array<{
         href?: string
         load: (l: unknown) => Promise<unknown>
@@ -375,12 +374,12 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
       }> }).spineItems
       const loader = (book.load as unknown as { bind: (b: unknown) => unknown }).bind(book)
       for (const item of items) {
-        if (out.length >= LIMIT) break
+        if (out.length >= SEARCH_LIMIT) break
         try {
           await item.load(loader)
           for (const m of item.find(q)) {
             out.push({ id: m.cfi, location: m.cfi, excerpt: m.excerpt })
-            if (out.length >= LIMIT) break
+            if (out.length >= SEARCH_LIMIT) break
           }
         } catch {
           /* skip a section that fails to load */

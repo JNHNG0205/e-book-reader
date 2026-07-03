@@ -1,7 +1,6 @@
 import { pdfjs } from 'react-pdf'
-import type { SearchResult } from './searchTypes'
+import { SEARCH_LIMIT, type SearchResult } from './searchTypes'
 
-const LIMIT = 200
 const CONTEXT = 60
 
 function excerptAround(text: string, idx: number, len: number): string {
@@ -17,12 +16,12 @@ export async function searchPdf(fileUrl: string, query: string): Promise<SearchR
   try {
     const out: SearchResult[] = []
     for (let page = 1; page <= pdf.numPages; page++) {
-      if (out.length >= LIMIT) break
+      if (out.length >= SEARCH_LIMIT) break
       const content = await pdf.getPage(page).then((p) => p.getTextContent())
       const text = content.items.map((i) => ('str' in i ? i.str : '')).join(' ')
       const lower = text.toLowerCase()
       let idx = lower.indexOf(q)
-      while (idx !== -1 && out.length < LIMIT) {
+      while (idx !== -1 && out.length < SEARCH_LIMIT) {
         out.push({
           id: `${page}-${idx}`,
           location: String(page),
