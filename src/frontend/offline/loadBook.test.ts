@@ -32,7 +32,7 @@ test('cache miss fetches, caches the bytes, and returns an object URL', async ()
   getCachedBook.mockResolvedValue(null)
   getBookFileUrl.mockResolvedValue('https://signed/b1.pdf')
   const buf = bytes('fetched-bytes')
-  global.fetch = vi.fn().mockResolvedValue({ arrayBuffer: async () => buf })
+  global.fetch = vi.fn().mockResolvedValue({ ok: true, arrayBuffer: async () => buf })
 
   const url = await loadBookObjectUrl('b1', 'u1/b1.pdf', 'pdf')
 
@@ -40,4 +40,25 @@ test('cache miss fetches, caches the bytes, and returns an object URL', async ()
   expect(global.fetch).toHaveBeenCalledWith('https://signed/b1.pdf')
   expect(putCachedBook).toHaveBeenCalledWith('b1', buf)
   expect(url).toBe('blob:x')
+})
+
+test('a cache-read failure (IndexedDB unavailable) still falls through to the network', async () => {
+  getCachedBook.mockRejectedValue(new Error('IndexedDB blocked'))
+  getBookFileUrl.mockResolvedValue('https://signed/b1.pdf')
+  const buf = bytes('fetched-bytes')
+  global.fetch = vi.fn().mockResolvedValue({ ok: true, arrayBuffer: async () => buf })
+
+  const url = await loadBookObjectUrl('b1', 'u1/b1.pdf', 'pdf')
+
+  expect(getBookFileUrl).toHaveBeenCalledWith('u1/b1.pdf')
+  expect(url).toBe('blob:x')
+})
+
+test('a non-ok download throws and does not cache the error body', async () => {
+  getCachedBook.mockResolvedValue(null)
+  getBookFileUrl.mockResolvedValue('https://signed/b1.pdf')
+  global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 403, arrayBuffer: async () => bytes('err') })
+
+  await expect(loadBookObjectUrl('b1', 'u1/b1.pdf', 'pdf')).rejects.toThrow(/403/)
+  expect(putCachedBook).not.toHaveBeenCalled()
 })
