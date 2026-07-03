@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { Book } from '@shared/types'
 import { getBook, getBookFileUrl } from '@backend/data/books'
+import { getProgress, saveProgress } from '@backend/data/progress'
 import { PdfViewer } from '@frontend/reader/PdfViewer'
 import { ReaderToolbar } from '@frontend/reader/ReaderToolbar'
 
@@ -27,12 +28,26 @@ export function ReaderPage() {
         if (!active) return
         setBook(b)
         if (b.format === 'pdf') setFileUrl(await getBookFileUrl(b.storage_path))
+        const saved = await getProgress(bookId)
+        if (active && saved) setPage(Math.max(1, parseInt(saved, 10) || 1))
       } catch (e) {
         if (active) setError((e as Error).message)
       }
     })()
     return () => { active = false }
   }, [bookId])
+
+  const didMount = useRef(false)
+  useEffect(() => {
+    if (!bookId) return
+    if (!didMount.current) { didMount.current = true; return }
+    const t = setTimeout(() => { void saveProgress(bookId, String(page)) }, 500)
+    return () => clearTimeout(t)
+  }, [bookId, page])
+
+  useEffect(() => {
+    if (numPages && page > numPages) setPage(numPages)
+  }, [numPages, page])
 
   const goBack = useCallback(() => navigate('/'), [navigate])
   const prev = () => setPage((p) => Math.max(1, p - 1))
