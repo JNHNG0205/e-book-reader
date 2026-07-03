@@ -6,7 +6,7 @@ import { EpubToolbar } from './EpubToolbar'
 const props = {
   fontSize: 100, theme: 'light' as const, current: 0, total: 0,
   onPrev: vi.fn(), onNext: vi.fn(), onFontSmaller: vi.fn(), onFontLarger: vi.fn(),
-  onCycleTheme: vi.fn(), onToggleToc: vi.fn(), onBack: vi.fn(), onAddBookmark: vi.fn(),
+  onCycleTheme: vi.fn(), onToggleToc: vi.fn(), onBack: vi.fn(),
 }
 
 test('shows the page numbers when known', () => {
@@ -37,11 +37,4 @@ test('fires nav + toc + back callbacks', async () => {
   expect(onNext).toHaveBeenCalled()
   expect(onToggleToc).toHaveBeenCalled()
   expect(onBack).toHaveBeenCalled()
-})
-
-test('fires add-bookmark', async () => {
-  const onAddBookmark = vi.fn()
-  render(<EpubToolbar {...props} onAddBookmark={onAddBookmark} />)
-  await userEvent.click(screen.getByRole('button', { name: /bookmark/i }))
-  expect(onAddBookmark).toHaveBeenCalled()
 })

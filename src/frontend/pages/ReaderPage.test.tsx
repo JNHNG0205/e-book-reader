@@ -78,10 +78,10 @@ test('resumes to the saved page', async () => {
   expect(await screen.findByTestId('pdf-page')).toHaveTextContent('page 3')
 })
 
-test('adds a bookmark at the current page', async () => {
+test('adds a bookmark at the current page via the star toggle', async () => {
   renderAt('b1')
   await screen.findByTestId('pdf-page')
-  await userEvent.click(screen.getByRole('button', { name: /add bookmark/i }))
+  await userEvent.click(screen.getByRole('button', { name: 'Add bookmark' }))
   await waitFor(() => expect(saveBookmark).toHaveBeenCalledWith('b1', expect.objectContaining({ location: '1', label: 'Page 1' })))
 })
 

@@ -9,6 +9,7 @@ import { ReaderToolbar } from '@frontend/reader/ReaderToolbar'
 import { EpubReader } from '@frontend/reader/EpubReader'
 import { ReaderSidebar } from '@frontend/reader/ReaderSidebar'
 import { BookmarksPanel } from '@frontend/reader/BookmarksPanel'
+import { BookmarkStar } from '@frontend/reader/BookmarkStar'
 
 const MIN_SCALE = 0.5
 const MAX_SCALE = 3
@@ -68,9 +69,18 @@ export function ReaderPage() {
   const zoomIn = () => setScale((s) => Math.min(MAX_SCALE, Math.round((s + 0.25) * 100) / 100))
   const zoomOut = () => setScale((s) => Math.max(MIN_SCALE, Math.round((s - 0.25) * 100) / 100))
 
-  async function addBookmark() {
-    const bm = await saveBookmark(book!.id, { location: String(page), label: `Page ${page}` })
-    setBookmarks((prev) => [...prev, bm])
+  const activeLocation = String(page)
+  const isBookmarked = bookmarks.some((b) => b.location === activeLocation)
+
+  async function toggleBookmark() {
+    const existing = bookmarks.find((b) => b.location === activeLocation)
+    if (existing) {
+      await deleteBookmark(existing.id)
+      setBookmarks((prev) => prev.filter((b) => b.id !== existing.id))
+    } else {
+      const bm = await saveBookmark(book!.id, { location: activeLocation, label: `Page ${page}` })
+      setBookmarks((prev) => [...prev, bm])
+    }
   }
   async function removeBookmark(id: string) {
     await deleteBookmark(id)
@@ -90,7 +100,6 @@ export function ReaderPage() {
         <ReaderToolbar
           page={page} numPages={numPages} scale={scale}
           onPrev={prev} onNext={next} onZoomIn={zoomIn} onZoomOut={zoomOut} onBack={goBack}
-          onAddBookmark={() => { void addBookmark() }}
           onToggleSidebar={() => setSidebarOpen((v) => !v)}
         />
       )}
@@ -105,7 +114,10 @@ export function ReaderPage() {
                 ) }]}
               />
             )}
-            <div className="p-4">
+            <div className="relative p-4">
+              <div className="absolute right-3 top-3 z-10">
+                <BookmarkStar active={isBookmarked} onToggle={() => { void toggleBookmark() }} />
+              </div>
               <PdfViewer fileUrl={fileUrl} pageNumber={page} scale={scale} onNumPages={setNumPages} />
             </div>
           </>

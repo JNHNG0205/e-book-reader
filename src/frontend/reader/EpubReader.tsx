@@ -6,6 +6,7 @@ import { EpubToolbar } from './EpubToolbar'
 import { TocPanel } from './TocPanel'
 import { ReaderSidebar } from './ReaderSidebar'
 import { BookmarksPanel } from './BookmarksPanel'
+import { BookmarkStar } from './BookmarkStar'
 import type { TocItem } from './epubToc'
 import type { Bookmark } from '@shared/types'
 import { loadReaderSettings, saveReaderSettings } from './readerSettings'
@@ -70,14 +71,22 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
     if (matched) setActiveHref(matched.href)
   }
 
-  async function addBookmark() {
-    // Fall back to the resume position if the reader hasn't emitted a relocation yet
-    // (e.g. tapping the bookmark button immediately after opening).
-    const location = currentCfi ?? initialCfi
-    if (!location) return
-    const label = progress ? `Page ${progress.current}` : 'Bookmark'
-    const bm = await saveBookmark(bookId, { location, label })
-    setBookmarks((prev) => [...prev, bm])
+  // Fall back to the resume position if the reader hasn't emitted a relocation yet
+  // (e.g. tapping the bookmark button immediately after opening).
+  const activeLocation = currentCfi ?? initialCfi
+  const isBookmarked = activeLocation != null && bookmarks.some((b) => b.location === activeLocation)
+
+  async function toggleBookmark() {
+    if (!activeLocation) return
+    const existing = bookmarks.find((b) => b.location === activeLocation)
+    if (existing) {
+      await deleteBookmark(existing.id)
+      setBookmarks((prev) => prev.filter((b) => b.id !== existing.id))
+    } else {
+      const label = progress ? `Page ${progress.current}` : 'Bookmark'
+      const bm = await saveBookmark(bookId, { location: activeLocation, label })
+      setBookmarks((prev) => [...prev, bm])
+    }
   }
   async function removeBookmark(id: string) {
     await deleteBookmark(id)
@@ -101,9 +110,11 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
         onCycleTheme={cycleTheme}
         onToggleToc={() => setTocOpen((v) => !v)}
         onBack={onBack}
-        onAddBookmark={() => { void addBookmark() }}
       />
-      <div className={`flex min-h-0 flex-1 justify-center ${AREA_BG[theme]}`}>
+      <div className={`relative flex min-h-0 flex-1 justify-center ${AREA_BG[theme]}`}>
+        <div className="absolute right-3 top-3 z-10">
+          <BookmarkStar active={isBookmarked} onToggle={() => { void toggleBookmark() }} />
+        </div>
         {tocOpen && (
           <ReaderSidebar
             onClose={() => setTocOpen(false)}

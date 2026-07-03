@@ -111,12 +111,22 @@ test('Back button calls the provided onBack', async () => {
   expect(onBack).toHaveBeenCalled()
 })
 
-test('adds a bookmark at the current cfi', async () => {
+test('adds a bookmark at the current cfi via the star toggle', async () => {
   await act(async () => { render(<EpubReader bookId="b1" fileUrl="https://x/y.epub" onBack={() => {}} />) })
   // simulate a relocation so there is a current cfi
   act(() => { (viewerProps.current?.onRelocated as (c: string) => void)('epubcfi(/6/14!/2)') })
-  await userEvent.click(screen.getByRole('button', { name: /add bookmark/i }))
+  await userEvent.click(screen.getByRole('button', { name: 'Add bookmark' }))
   await waitFor(() => expect(saveBookmark).toHaveBeenCalledWith('b1', expect.objectContaining({ location: 'epubcfi(/6/14!/2)' })))
+})
+
+test('shows a filled star and removes the bookmark when the current cfi is already bookmarked', async () => {
+  listBookmarks.mockResolvedValue([
+    { id: 'bm1', user_id: 'u1', book_id: 'b1', location: 'epubcfi(/6/14!/2)', label: 'Bookmark', created_at: '', updated_at: '' },
+  ])
+  await act(async () => { render(<EpubReader bookId="b1" fileUrl="https://x/y.epub" onBack={() => {}} />) })
+  act(() => { (viewerProps.current?.onRelocated as (c: string) => void)('epubcfi(/6/14!/2)') })
+  await userEvent.click(screen.getByRole('button', { name: 'Remove bookmark' }))
+  await waitFor(() => expect(deleteBookmark).toHaveBeenCalledWith('bm1'))
 })
 
 test('shows bookmarks in the sidebar and jumps via goTo', async () => {
