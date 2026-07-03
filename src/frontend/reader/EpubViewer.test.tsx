@@ -313,7 +313,10 @@ test('reports a text selection on mouseup via onSelect', async () => {
       }),
       frameElement: { getBoundingClientRect: () => ({ left: 10, top: 20 }) },
     },
-    cfiFromRange: () => 'epubcfi(sel)',
+    // `this`-dependent (like epub.js's real cfiFromRange, which reads this.cfiBase) so
+    // the test fails if the handler calls it unbound.
+    cfiBase: 'sel',
+    cfiFromRange(this: { cfiBase: string }) { return `epubcfi(${this.cfiBase})` },
   }
   render(
     <EpubViewer fileUrl="https://x/y.epub"

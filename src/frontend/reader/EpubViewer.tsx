@@ -242,7 +242,8 @@ function attachSelectionHandler(
   selectionWindowRef: { current: SelectionWindow | null },
 ): void {
   const win = contents.window
-  const cfiFromRange = contents.cfiFromRange
+  // Bind to `contents` — epub.js's cfiFromRange uses `this.cfiBase`, so an unbound call throws.
+  const cfiFromRange = contents.cfiFromRange?.bind(contents)
   if (!win || !cfiFromRange) return
   const handler = (): void => {
     const sel = win.getSelection()
