@@ -14,12 +14,26 @@ export interface EpubViewerHandle {
 
 export interface EpubViewerProps {
   fileUrl: string
+  bookId?: string
   initialCfi?: string | null
   fontSize: number
   theme: EpubTheme
   onRelocated: (cfi: string) => void
   onToc: (toc: TocItem[]) => void
   onProgress?: (p: { current: number; total: number }) => void
+}
+
+// Generating epub.js "locations" (the index behind the "X / Y" progress count) is slow
+// on first open — a few seconds for a full book. We persist the generated index per book
+// so every later open loads it instantly instead of recomputing.
+function locationsCacheKey(bookId: string): string {
+  return `epub.locations.${bookId}`
+}
+function readLocationsCache(bookId: string): string | null {
+  try { return localStorage.getItem(locationsCacheKey(bookId)) } catch { return null }
+}
+function writeLocationsCache(bookId: string, json: string): void {
+  try { localStorage.setItem(locationsCacheKey(bookId), json) } catch { /* ignore quota */ }
 }
 
 const THEME_STYLES: Record<EpubTheme, Record<string, Record<string, string>>> = {
@@ -94,7 +108,7 @@ function reportProgressForCfi(
 }
 
 export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function EpubViewer(
-  { fileUrl, initialCfi, fontSize, theme, onRelocated, onToc, onProgress },
+  { fileUrl, bookId, initialCfi, fontSize, theme, onRelocated, onToc, onProgress },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -160,7 +174,18 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
         // some books, so failures are swallowed and progress is simply not reported.
         try {
           await book.ready
-          await book.locations.generate(1000)
+          const locations = book.locations as unknown as {
+            generate: (chars: number) => Promise<unknown>
+            load: (json: string) => void
+            save: () => string
+          }
+          const cached = bookId ? readLocationsCache(bookId) : null
+          if (cached) {
+            locations.load(cached) // instant on re-open
+          } else {
+            await locations.generate(1000)
+            if (bookId) writeLocationsCache(bookId, locations.save())
+          }
           if (cancelled) return
           const loc = rendition.currentLocation() as unknown as { start: { cfi: string } } | undefined
           if (loc?.start?.cfi) reportProgressForCfi(book, loc.start.cfi, onProgressRef)

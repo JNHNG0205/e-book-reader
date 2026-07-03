@@ -84,6 +84,7 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
           <EpubViewer
             ref={viewerRef}
             fileUrl={fileUrl}
+            bookId={bookId}
             initialCfi={initialCfi}
             fontSize={fontSize}
             theme={theme}

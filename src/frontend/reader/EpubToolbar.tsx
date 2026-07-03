@@ -26,7 +26,9 @@ export function EpubToolbar({
       </div>
       <div className="flex items-center gap-2">
         <button type="button" aria-label="Previous" onClick={onPrev} className="rounded border px-2 py-1">‹</button>
-        {total > 0 && <span className="text-gray-500">{current} / {total}</span>}
+        {total > 0
+          ? <span className="text-gray-500">{current} / {total}</span>
+          : <span className="text-gray-400" title="Calculating pages…">…</span>}
         <button type="button" aria-label="Next" onClick={onNext} className="rounded border px-2 py-1">›</button>
       </div>
       <div className="flex items-center gap-2">

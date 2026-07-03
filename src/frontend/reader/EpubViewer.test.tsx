@@ -33,6 +33,8 @@ const { rendition, book: _book, ePub, relocatedHandlers, contentHandlers } = vi.
       generate: vi.fn().mockResolvedValue([]),
       length: vi.fn(() => 100),
       locationFromCfi: vi.fn(() => 11),
+      save: vi.fn(() => '["loc1","loc2"]'),
+      load: vi.fn(),
     },
     resources: {
       urls: ['images/00013.jpg', 'style.css'],
@@ -48,6 +50,7 @@ import { EpubViewer, type EpubViewerHandle } from './EpubViewer'
 
 beforeEach(() => {
   vi.clearAllMocks()
+  localStorage.clear()
   relocatedHandlers.length = 0
   contentHandlers.length = 0
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
@@ -166,6 +169,28 @@ test('leaves already-resolved (blob:) images untouched', async () => {
   // Give any (unexpected) async work a tick, then confirm it was not rewritten.
   await Promise.resolve()
   expect(doc.querySelector('img')?.getAttribute('src')).toBe('blob:already-resolved')
+})
+
+test('generates and caches locations on first open (no cache)', async () => {
+  render(
+    <EpubViewer fileUrl="https://x/y.epub" bookId="b1"
+      fontSize={100} theme="light" onRelocated={() => {}} onToc={() => {}} />,
+  )
+  await vi.waitFor(() => expect(_book.locations.generate).toHaveBeenCalledWith(1000))
+  await vi.waitFor(() => {
+    expect(localStorage.getItem('epub.locations.b1')).toBe('["loc1","loc2"]')
+  })
+  expect(_book.locations.load).not.toHaveBeenCalled()
+})
+
+test('loads cached locations instantly on re-open (skips generate)', async () => {
+  localStorage.setItem('epub.locations.b1', '["cached"]')
+  render(
+    <EpubViewer fileUrl="https://x/y.epub" bookId="b1"
+      fontSize={100} theme="light" onRelocated={() => {}} onToc={() => {}} />,
+  )
+  await vi.waitFor(() => expect(_book.locations.load).toHaveBeenCalledWith('["cached"]'))
+  expect(_book.locations.generate).not.toHaveBeenCalled()
 })
 
 test('shows an error when the file fails to fetch', async () => {
