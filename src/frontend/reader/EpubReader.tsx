@@ -62,9 +62,12 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
   useEffect(() => () => { if (saveTimer.current) clearTimeout(saveTimer.current) }, [])
 
   async function addBookmark() {
-    if (!currentCfi) return
+    // Fall back to the resume position if the reader hasn't emitted a relocation yet
+    // (e.g. tapping the bookmark button immediately after opening).
+    const location = currentCfi ?? initialCfi
+    if (!location) return
     const label = progress ? `Location ${progress.current}` : 'Bookmark'
-    const bm = await saveBookmark(bookId, { location: currentCfi, label })
+    const bm = await saveBookmark(bookId, { location, label })
     setBookmarks((prev) => [...prev, bm])
   }
   async function removeBookmark(id: string) {
