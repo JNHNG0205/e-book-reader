@@ -53,6 +53,14 @@ export function HighlightPopover({
             style={{ backgroundColor: c.value }}
           />
         ))}
+        <button
+          type="button"
+          aria-label="Cancel"
+          onClick={onClose}
+          className="ml-1 h-6 w-6 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+        >
+          ✕
+        </button>
       </div>
       {mode === 'edit' && (
         <div className="mt-2 w-56">

@@ -25,6 +25,14 @@ test('edit mode: saves a note and deletes', async () => {
   expect(onDelete).toHaveBeenCalled()
 })
 
+test('cancel button closes without highlighting', async () => {
+  const onClose = vi.fn(); const onPickColor = vi.fn()
+  render(<HighlightPopover x={0} y={0} mode="create" onPickColor={onPickColor} onClose={onClose} />)
+  await userEvent.click(screen.getByRole('button', { name: /cancel/i }))
+  expect(onClose).toHaveBeenCalled()
+  expect(onPickColor).not.toHaveBeenCalled()
+})
+
 test('closes on Escape', async () => {
   const onClose = vi.fn()
   render(<HighlightPopover x={0} y={0} mode="create" onPickColor={() => {}} onClose={onClose} />)
