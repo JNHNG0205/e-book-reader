@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { getProgress, saveProgress } from '@backend/data/progress'
 import { listBookmarks, saveBookmark, deleteBookmark } from '@backend/data/bookmarks'
 import { listHighlights, saveHighlight, updateHighlight, deleteHighlight } from '@backend/data/highlights'
@@ -65,16 +65,21 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
   // Load highlights on mount.
   useEffect(() => { listHighlights(bookId).then(setHighlights).catch(() => {}) }, [bookId])
 
-  const viewerHighlights = highlights.map((h) => ({
-    id: h.id,
-    cfiRange: String((h.anchor as { cfiRange?: string }).cfiRange ?? ''),
-    color: h.color,
-  }))
+  // Stable across unrelated re-renders (relocate/progress) so EpubViewer's highlight
+  // sync effect only re-runs when the highlights actually change.
+  const viewerHighlights = useMemo(
+    () => highlights.map((h) => ({
+      id: h.id,
+      cfiRange: String((h.anchor as { cfiRange?: string }).cfiRange ?? ''),
+      color: h.color,
+    })),
+    [highlights],
+  )
 
   async function createHighlight(color: string) {
     if (!popover?.cfiRange) return
-    const bm = await saveHighlight(bookId, { color, anchor: { cfiRange: popover.cfiRange, text: popover.text ?? '' } })
-    setHighlights((prev) => [...prev, bm])
+    const saved = await saveHighlight(bookId, { color, anchor: { cfiRange: popover.cfiRange, text: popover.text ?? '' } })
+    setHighlights((prev) => [...prev, saved])
     setPopover(null)
   }
   async function changeColor(color: string) {
@@ -208,6 +213,7 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
         </div>
         {popover && (
           <HighlightPopover
+            key={popover.id ?? 'create'}
             x={popover.x} y={popover.y} mode={popover.mode}
             color={popover.color} note={popover.note}
             onPickColor={(c) => { void (popover.mode === 'create' ? createHighlight(c) : changeColor(c)) }}
