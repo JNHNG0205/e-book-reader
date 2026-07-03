@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, type MouseEvent as ReactMouseEvent } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/TextLayer.css'
 import { colorValue } from './highlightColors'
@@ -45,6 +45,24 @@ export function PdfViewer({
     onSelect({ rects, text, x: last.left + last.width / 2, y: last.top })
   }
 
+  // The overlays are pointer-events:none (so they never block text selection), and
+  // react-pdf's text layer sits above them (z-index 2) and swallows clicks — so we detect
+  // a highlight click by hit-testing the click point against the highlights' rects.
+  function handleClick(e: ReactMouseEvent) {
+    if (!onHighlightClick || !highlights?.length || !wrapperRef.current) return
+    if (!window.getSelection()?.isCollapsed) return // a drag-select, not a click
+    const pageRect = wrapperRef.current.getBoundingClientRect()
+    if (pageRect.width === 0 || pageRect.height === 0) return
+    const nx = (e.clientX - pageRect.left) / pageRect.width
+    const ny = (e.clientY - pageRect.top) / pageRect.height
+    for (const h of highlights) {
+      if (h.rects.some((r) => nx >= r.x && nx <= r.x + r.w && ny >= r.y && ny <= r.y + r.h)) {
+        onHighlightClick(h.id, e.clientX, e.clientY)
+        return
+      }
+    }
+  }
+
   return (
     <Document
       file={fileUrl}
@@ -57,6 +75,7 @@ export function PdfViewer({
         data-pdf-page-wrapper
         className="relative inline-block"
         onMouseUp={handleMouseUp}
+        onClick={handleClick}
       >
         <Page pageNumber={pageNumber} scale={scale} renderAnnotationLayer={false} />
         {highlights?.flatMap((h) =>
@@ -64,7 +83,6 @@ export function PdfViewer({
             <div
               key={`${h.id}-${i}`}
               data-highlight-id={h.id}
-              onClick={(e) => onHighlightClick?.(h.id, e.clientX, e.clientY)}
               style={{
                 position: 'absolute',
                 left: `${r.x * 100}%`,
@@ -74,7 +92,7 @@ export function PdfViewer({
                 backgroundColor: colorValue(h.color),
                 opacity: 0.35,
                 mixBlendMode: 'multiply',
-                cursor: 'pointer',
+                pointerEvents: 'none',
               }}
             />
           )),

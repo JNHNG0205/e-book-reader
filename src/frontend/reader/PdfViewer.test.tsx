@@ -1,5 +1,4 @@
-import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { expect, test, vi } from 'vitest'
 
 vi.mock('react-pdf', () => ({
@@ -63,14 +62,34 @@ test('reports a text selection on mouseup', async () => {
   vi.restoreAllMocks()
 })
 
-test('clicking an overlay reports the highlight id', async () => {
+test('clicking inside a highlight rect reports the highlight id (hit-test)', async () => {
   const onHighlightClick = vi.fn()
+  // The overlay is pointer-events:none; the wrapper hit-tests the click against the rects.
+  vi.spyOn(window, 'getSelection').mockReturnValue({ isCollapsed: true } as unknown as Selection)
   const { container } = render(
     <PdfViewer fileUrl="https://x/y.pdf" pageNumber={1} scale={1} onNumPages={() => {}}
-      highlights={[{ id: 'h1', color: 'yellow', rects: [{ x: 0, y: 0, w: 0.3, h: 0.05 }] }]}
+      highlights={[{ id: 'h1', color: 'yellow', rects: [{ x: 0.1, y: 0.1, w: 0.3, h: 0.1 }] }]}
       onHighlightClick={onHighlightClick} />,
   )
-  const overlay = container.querySelector('[data-highlight-id="h1"]') as HTMLElement
-  await userEvent.click(overlay)
-  expect(onHighlightClick).toHaveBeenCalledWith('h1', expect.any(Number), expect.any(Number))
+  const wrapper = container.querySelector('[data-pdf-page-wrapper]') as HTMLElement
+  vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, width: 400, height: 800 } as DOMRect)
+  // Click at (80, 120): nx=0.2, ny=0.15 — inside the rect [0.1..0.4, 0.1..0.2].
+  fireEvent.click(wrapper, { clientX: 80, clientY: 120 })
+  expect(onHighlightClick).toHaveBeenCalledWith('h1', 80, 120)
+  vi.restoreAllMocks()
+})
+
+test('clicking outside every highlight rect reports nothing', async () => {
+  const onHighlightClick = vi.fn()
+  vi.spyOn(window, 'getSelection').mockReturnValue({ isCollapsed: true } as unknown as Selection)
+  const { container } = render(
+    <PdfViewer fileUrl="https://x/y.pdf" pageNumber={1} scale={1} onNumPages={() => {}}
+      highlights={[{ id: 'h1', color: 'yellow', rects: [{ x: 0.1, y: 0.1, w: 0.3, h: 0.1 }] }]}
+      onHighlightClick={onHighlightClick} />,
+  )
+  const wrapper = container.querySelector('[data-pdf-page-wrapper]') as HTMLElement
+  vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, width: 400, height: 800 } as DOMRect)
+  fireEvent.click(wrapper, { clientX: 360, clientY: 700 })
+  expect(onHighlightClick).not.toHaveBeenCalled()
+  vi.restoreAllMocks()
 })
