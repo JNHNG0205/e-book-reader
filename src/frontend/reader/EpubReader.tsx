@@ -75,7 +75,6 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
             items={toc}
             activeHref={activeHref}
             onNavigate={(href) => { viewerRef.current?.goTo(href); setActiveHref(href) }}
-            onClose={() => setTocOpen(false)}
           />
         )}
         {/* Constrain the reading column to a book-like width so lines don't stretch
