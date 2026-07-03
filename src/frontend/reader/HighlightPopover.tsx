@@ -70,8 +70,14 @@ export function HighlightPopover({
             placeholder="Add a note…"
             className="h-16 w-full rounded border p-1 text-sm"
           />
-          <div className="mt-1 flex justify-between">
-            <button type="button" onClick={() => onDelete?.()} className="text-sm text-red-600">Delete</button>
+          <div className="mt-1 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => onDelete?.()}
+              className="flex items-center gap-1 rounded border border-red-200 px-2 py-1 text-sm text-red-600 hover:bg-red-50"
+            >
+              🗑 Remove highlight
+            </button>
             <button
               type="button"
               onClick={() => onSaveNote?.(draft)}

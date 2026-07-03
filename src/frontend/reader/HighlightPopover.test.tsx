@@ -21,7 +21,7 @@ test('edit mode: saves a note and deletes', async () => {
   await userEvent.type(box, 'my note')
   await userEvent.click(screen.getByRole('button', { name: /save note/i }))
   expect(onSaveNote).toHaveBeenCalledWith('my note')
-  await userEvent.click(screen.getByRole('button', { name: /delete/i }))
+  await userEvent.click(screen.getByRole('button', { name: /remove highlight/i }))
   expect(onDelete).toHaveBeenCalled()
 })
 
