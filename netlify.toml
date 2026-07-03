@@ -1,0 +1,25 @@
+# Netlify deploy config for the e-book reader (Vite SPA + PWA).
+
+[build]
+  command = "bun run build"
+  publish = "dist"
+
+# Single-page-app fallback: client-side routes like /read/:bookId must serve the SPA
+# shell. Netlify serves a real file when one exists at the path, so this catch-all only
+# applies to app routes — it never shadows built assets, sw.js, or the manifest.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Never long-cache the service worker or manifest, so PWA updates propagate on the next
+# visit instead of being pinned to a stale cached copy.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
