@@ -15,11 +15,19 @@ const { listBookmarks, saveBookmark, deleteBookmark } = vi.hoisted(() => ({
   listBookmarks: vi.fn(), saveBookmark: vi.fn(), deleteBookmark: vi.fn(),
 }))
 vi.mock('@backend/data/bookmarks', () => ({ listBookmarks, saveBookmark, deleteBookmark }))
+const { listHighlights, saveHighlight, updateHighlight, deleteHighlight } = vi.hoisted(() => ({
+  listHighlights: vi.fn(), saveHighlight: vi.fn(), updateHighlight: vi.fn(), deleteHighlight: vi.fn(),
+}))
+vi.mock('@backend/data/highlights', () => ({ listHighlights, saveHighlight, updateHighlight, deleteHighlight }))
+// Capture the props ReaderPage passes to the (mocked) PdfViewer, and expose a way to
+// drive its callbacks, mirroring how EpubReader.test exposes viewerProps.
+const { pdfProps } = vi.hoisted(() => ({ pdfProps: { current: null as Record<string, unknown> | null } }))
 // Mock the PDF viewer so we don't need a real canvas; report 5 pages.
 vi.mock('@frontend/reader/PdfViewer', () => ({
-  PdfViewer: ({ pageNumber, onNumPages }: { pageNumber: number; onNumPages: (n: number) => void }) => {
-    onNumPages(5)
-    return <div data-testid="pdf-page">page {pageNumber}</div>
+  PdfViewer: (props: Record<string, unknown> & { pageNumber: number; onNumPages: (n: number) => void }) => {
+    pdfProps.current = props
+    props.onNumPages(5)
+    return <div data-testid="pdf-page">page {props.pageNumber}</div>
   },
 }))
 vi.mock('@frontend/reader/EpubReader', () => ({
@@ -50,6 +58,10 @@ beforeEach(() => {
   listBookmarks.mockResolvedValue([])
   saveBookmark.mockResolvedValue({ id: 'bm1', user_id: 'u1', book_id: 'b1', location: '1', label: 'Page 1', created_at: '', updated_at: '' })
   deleteBookmark.mockResolvedValue(undefined)
+  listHighlights.mockResolvedValue([])
+  saveHighlight.mockResolvedValue(undefined)
+  updateHighlight.mockResolvedValue(undefined)
+  deleteHighlight.mockResolvedValue(undefined)
 })
 
 test('loads the book and renders the first page', async () => {
@@ -110,4 +122,33 @@ test('saves the location when the page changes (debounced)', async () => {
   } finally {
     vi.useRealTimers()
   }
+})
+
+test('creates a PDF highlight from a selection on the current page', async () => {
+  saveHighlight.mockResolvedValue({ id: 'h1', color: 'yellow', note: null,
+    anchor: { page: 1, rects: [{ x: 0, y: 0, w: 0.5, h: 0.05 }], text: 'hi' },
+    user_id: 'u1', book_id: 'b1', created_at: '', updated_at: '' })
+  renderAt('b1')
+  await screen.findByTestId('pdf-page')
+  act(() => { (pdfProps.current?.onSelect as (s: unknown) => void)(
+    { rects: [{ x: 0, y: 0, w: 0.5, h: 0.05 }], text: 'hi', x: 20, y: 20 }) })
+  await userEvent.click(await screen.findByRole('button', { name: /yellow/i }))
+  await waitFor(() => expect(saveHighlight).toHaveBeenCalledWith('b1', expect.objectContaining({
+    color: 'yellow',
+    anchor: expect.objectContaining({ page: 1, text: 'hi' }),
+  })))
+})
+
+test('shows PDF highlights in the Highlights tab and jumps to the page', async () => {
+  listHighlights.mockResolvedValue([
+    { id: 'h1', color: 'green', note: null,
+      anchor: { page: 4, rects: [{ x: 0, y: 0, w: 0.4, h: 0.05 }], text: 'later bit' },
+      user_id: 'u1', book_id: 'b1', created_at: '', updated_at: '' },
+  ])
+  renderAt('b1')
+  await screen.findByTestId('pdf-page')
+  await userEvent.click(screen.getByRole('button', { name: /bookmarks/i })) // opens the sidebar
+  await userEvent.click(await screen.findByRole('button', { name: 'Highlights' }))
+  await userEvent.click(await screen.findByText(/later bit/))
+  expect(screen.getByTestId('pdf-page')).toHaveTextContent('page 4')
 })
