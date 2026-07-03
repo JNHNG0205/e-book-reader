@@ -3,6 +3,7 @@ import {
 } from 'react'
 import ePub, { type Rendition } from 'epubjs'
 import { flattenToc, type TocItem } from './epubToc'
+import { colorValue } from './highlightColors'
 
 export type EpubTheme = 'light' | 'dark' | 'sepia'
 
@@ -24,6 +25,12 @@ export interface EpubViewerProps {
   // Current section href on each relocation — used to keep the TOC highlight in sync
   // with the actual reading position (in-book links, page turns), not just sidebar clicks.
   onSection?: (href: string) => void
+  // Currently-saved highlights to render as epub.js annotations.
+  highlights?: Array<{ id: string; cfiRange: string; color: string }>
+  // Fired when the user selects text in the rendered book.
+  onSelect?: (sel: { cfiRange: string; text: string; x: number; y: number }) => void
+  // Fired when a rendered highlight annotation is clicked.
+  onHighlightClick?: (id: string, x: number, y: number) => void
 }
 
 // Generating epub.js "locations" (the index behind the "X / Y" progress count) is slow
@@ -187,8 +194,62 @@ function reportProgressForCfi(
   onProgressRef.current({ current: index + 1, total })
 }
 
+// Reads the selection rect from the iframe's own document and offsets it by the
+// iframe's position in the outer page, so the resulting (x, y) is a viewport coordinate
+// usable to position a popover in the host document.
+function selectionPosition(contents: {
+  window: {
+    getSelection: () => { getRangeAt: (i: number) => { getBoundingClientRect: () => DOMRect } } | null
+    frameElement?: { getBoundingClientRect: () => { left: number; top: number } } | null
+  }
+}): { x: number; y: number } {
+  const sel = contents.window.getSelection()
+  const rect = sel?.getRangeAt(0).getBoundingClientRect()
+  const frame = contents.window.frameElement?.getBoundingClientRect()
+  const fx = frame?.left ?? 0
+  const fy = frame?.top ?? 0
+  return { x: fx + (rect?.left ?? 0) + (rect?.width ?? 0) / 2, y: fy + (rect?.top ?? 0) }
+}
+
+// Diffs `highlights` against the ids already applied as epub.js annotations, removing
+// ones that were deleted or recolored and adding new/changed ones — so re-renders don't
+// blindly re-add every highlight (which would leak duplicate marks in the iframe).
+function syncAnnotations(
+  rendition: Rendition,
+  highlights: Array<{ id: string; cfiRange: string; color: string }>,
+  applied: Map<string, string>,
+  onHighlightClick: { current?: ((id: string, x: number, y: number) => void) | undefined },
+): void {
+  const annotations = rendition.annotations as unknown as {
+    add: (
+      type: string, cfiRange: string, data: unknown, cb: () => void,
+      className: string, styles: Record<string, string>,
+    ) => void
+    remove: (cfiRange: string, type: string) => void
+  }
+  const next = new Map(highlights.map((h) => [h.id, h.cfiRange]))
+  // remove gone / changed
+  for (const [id, cfi] of applied) {
+    if (!next.has(id)) { annotations.remove(cfi, 'highlight'); applied.delete(id) }
+  }
+  // add new (or re-add ones whose cfiRange/color changed)
+  for (const h of highlights) {
+    if (applied.get(h.id) === h.cfiRange) continue
+    if (applied.has(h.id)) annotations.remove(applied.get(h.id)!, 'highlight')
+    annotations.add(
+      'highlight', h.cfiRange, { id: h.id },
+      () => onHighlightClick.current?.(h.id, 0, 0),
+      `hl-${h.id}`, { fill: colorValue(h.color), 'fill-opacity': '0.35', 'mix-blend-mode': 'multiply' },
+    )
+    applied.set(h.id, h.cfiRange)
+  }
+}
+
 export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function EpubViewer(
-  { fileUrl, bookId, initialCfi, fontSize, theme, onRelocated, onToc, onProgress, onSection },
+  {
+    fileUrl, bookId, initialCfi, fontSize, theme, onRelocated, onToc, onProgress, onSection,
+    highlights, onSelect, onHighlightClick,
+  },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -198,12 +259,17 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
   const onTocRef = useRef(onToc)
   const onProgressRef = useRef(onProgress)
   const onSectionRef = useRef(onSection)
+  const onSelectRef = useRef(onSelect)
+  const onHighlightClickRef = useRef(onHighlightClick)
+  const appliedRef = useRef(new Map<string, string>())
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => { onRelocatedRef.current = onRelocated }, [onRelocated])
   useEffect(() => { onTocRef.current = onToc }, [onToc])
   useEffect(() => { onProgressRef.current = onProgress }, [onProgress])
   useEffect(() => { onSectionRef.current = onSection }, [onSection])
+  useEffect(() => { onSelectRef.current = onSelect }, [onSelect])
+  useEffect(() => { onHighlightClickRef.current = onHighlightClick }, [onHighlightClick])
 
   useImperativeHandle(ref, () => ({
     next: () => renditionRef.current?.next(),
@@ -251,6 +317,24 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
           reportProgressForCfi(currentBook, loc.start.cfi, onProgressRef)
           if (loc.start.href) onSectionRef.current?.(loc.start.href)
         })
+        rendition.on('selected', (cfiRange: string, contents: {
+          window: {
+            getSelection: () => {
+              toString: () => string
+              getRangeAt: (i: number) => { getBoundingClientRect: () => DOMRect }
+              removeAllRanges: () => void
+            } | null
+            frameElement?: { getBoundingClientRect: () => { left: number; top: number } } | null
+          }
+        }) => {
+          const selection = contents.window.getSelection()
+          const text = selection?.toString() ?? ''
+          const { x, y } = selectionPosition(contents)
+          onSelectRef.current?.({ cfiRange, text, x, y })
+          selection?.removeAllRanges()
+        })
+        appliedRef.current = new Map()
+        syncAnnotations(rendition, highlights ?? [], appliedRef.current, onHighlightClickRef)
         void book.loaded.navigation
           .then((nav: { toc: Parameters<typeof flattenToc>[0] }) => { onTocRef.current(flattenToc(nav.toc)) })
           .catch(() => { /* navigation failed to load; leave toc empty */ })
@@ -295,6 +379,11 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
     const r = renditionRef.current
     if (r) applyEpubTheme(r, theme)
   }, [theme])
+  // Re-sync annotations whenever the saved highlights change.
+  useEffect(() => {
+    const r = renditionRef.current
+    if (r) syncAnnotations(r, highlights ?? [], appliedRef.current, onHighlightClickRef)
+  }, [highlights])
 
   if (error) {
     return <div className="p-8 text-red-600" role="alert">{error}</div>

@@ -5,15 +5,19 @@ import {
 } from 'vitest'
 
 // Shared fake rendition/book captured per test.
-const { rendition, book: _book, ePub, relocatedHandlers, contentHandlers } = vi.hoisted(() => {
+const {
+  rendition, book: _book, ePub, relocatedHandlers, contentHandlers, selectedHandlers,
+} = vi.hoisted(() => {
   const relocatedHandlers: Array<(loc: { start: { cfi: string; href?: string } }) => void> = []
   const contentHandlers: Array<(contents: { document: Document }) => void> = []
+  const selectedHandlers: Array<(cfiRange: string, contents: unknown) => void> = []
   const rendition = {
     display: vi.fn().mockResolvedValue(undefined),
     next: vi.fn(),
     prev: vi.fn(),
-    on: vi.fn((event: string, cb: (loc: { start: { cfi: string; href?: string } }) => void) => {
-      if (event === 'relocated') relocatedHandlers.push(cb)
+    on: vi.fn((event: string, cb: (...args: never[]) => void) => {
+      if (event === 'relocated') relocatedHandlers.push(cb as never)
+      if (event === 'selected') selectedHandlers.push(cb as never)
     }),
     hooks: {
       content: {
@@ -21,6 +25,7 @@ const { rendition, book: _book, ePub, relocatedHandlers, contentHandlers } = vi.
       },
     },
     themes: { fontSize: vi.fn(), register: vi.fn(), select: vi.fn(), override: vi.fn() },
+    annotations: { add: vi.fn(), remove: vi.fn() },
     destroy: vi.fn(),
     currentLocation: vi.fn(() => ({ start: { cfi: 'epubcfi(x)' } })),
   }
@@ -51,7 +56,9 @@ const { rendition, book: _book, ePub, relocatedHandlers, contentHandlers } = vi.
     },
   }
   const ePub = vi.fn(() => book)
-  return { rendition, book, ePub, relocatedHandlers, contentHandlers }
+  return {
+    rendition, book, ePub, relocatedHandlers, contentHandlers, selectedHandlers,
+  }
 })
 vi.mock('epubjs', () => ({ default: ePub }))
 
@@ -62,6 +69,7 @@ beforeEach(() => {
   localStorage.clear()
   relocatedHandlers.length = 0
   contentHandlers.length = 0
+  selectedHandlers.length = 0
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
     ok: true,
     arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
@@ -273,4 +281,42 @@ test('shows an error when the file fails to fetch', async () => {
   )
   const alert = await findByRole('alert')
   expect(alert.textContent).toMatch(/failed to load/i)
+})
+
+test('applies saved highlights as annotations', async () => {
+  render(
+    <EpubViewer fileUrl="https://x/y.epub"
+      highlights={[{ id: 'h1', cfiRange: 'epubcfi(range1)', color: 'yellow' }]}
+      fontSize={100} theme="light" onRelocated={() => {}} onToc={() => {}} />,
+  )
+  await vi.waitFor(() =>
+    expect(rendition.annotations.add).toHaveBeenCalledWith(
+      'highlight', 'epubcfi(range1)', expect.any(Object), expect.any(Function),
+      'hl-h1', expect.objectContaining({ fill: expect.any(String) }),
+    ),
+  )
+})
+
+test('reports a text selection via onSelect', async () => {
+  const onSelect = vi.fn()
+  // Provide a fake contents with a selection + frameElement offset.
+  const fakeContents = {
+    window: {
+      getSelection: () => ({
+        toString: () => 'selected words',
+        getRangeAt: () => ({ getBoundingClientRect: () => ({ left: 100, top: 50, width: 40, height: 12 }) }),
+        removeAllRanges: () => {},
+      }),
+      frameElement: { getBoundingClientRect: () => ({ left: 10, top: 20 }) },
+    },
+  }
+  render(
+    <EpubViewer fileUrl="https://x/y.epub"
+      fontSize={100} theme="light" onRelocated={() => {}} onToc={() => {}} onSelect={onSelect} />,
+  )
+  await vi.waitFor(() => expect(selectedHandlers.length).toBeGreaterThan(0))
+  selectedHandlers[0]?.('epubcfi(sel)', fakeContents)
+  expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({
+    cfiRange: 'epubcfi(sel)', text: 'selected words',
+  }))
 })
