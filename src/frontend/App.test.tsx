@@ -7,6 +7,9 @@ vi.mock('@frontend/auth/useSession', () => ({ useSession: () => useSession() }))
 vi.mock('@frontend/reader/PdfViewer', () => ({
   PdfViewer: () => <div data-testid="pdf-viewer" />,
 }))
+vi.mock('@frontend/reader/searchPdf', () => ({
+  searchPdf: vi.fn().mockResolvedValue([]),
+}))
 vi.mock('@frontend/library/coverExtract', () => ({
   extractCoverBlob: vi.fn().mockResolvedValue(null),
 }))

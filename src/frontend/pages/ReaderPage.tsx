@@ -13,6 +13,8 @@ import { BookmarksPanel } from '@frontend/reader/BookmarksPanel'
 import { HighlightsPanel } from '@frontend/reader/HighlightsPanel'
 import { HighlightPopover } from '@frontend/reader/HighlightPopover'
 import { BookmarkStar } from '@frontend/reader/BookmarkStar'
+import { SearchPanel } from '@frontend/reader/SearchPanel'
+import { searchPdf } from '@frontend/reader/searchPdf'
 import type { NormRect } from '@frontend/reader/pdfHighlightGeometry'
 
 const MIN_SCALE = 0.5
@@ -169,6 +171,9 @@ export function ReaderPage() {
                       onJump={(h) => { const p = (h.anchor as { page?: number }).page; if (p) setPage(p) }}
                       onDelete={removeHighlight}
                     />
+                  ) },
+                  { key: 'search', label: 'Search', render: () => (
+                    <SearchPanel onSearch={(q) => searchPdf(fileUrl, q)} onJump={(r) => setPage(Number(r.location))} />
                   ) },
                 ]}
               />

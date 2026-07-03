@@ -35,6 +35,8 @@ vi.mock('@frontend/reader/EpubReader', () => ({
     <div data-testid="epub-reader">{bookId}:{fileUrl}</div>
   ),
 }))
+const { searchPdf } = vi.hoisted(() => ({ searchPdf: vi.fn() }))
+vi.mock('@frontend/reader/searchPdf', () => ({ searchPdf }))
 
 import { ReaderPage } from './ReaderPage'
 
@@ -62,6 +64,7 @@ beforeEach(() => {
   saveHighlight.mockResolvedValue(undefined)
   updateHighlight.mockResolvedValue(undefined)
   deleteHighlight.mockResolvedValue(undefined)
+  searchPdf.mockResolvedValue([])
 })
 
 test('loads the book and renders the first page', async () => {
@@ -151,4 +154,20 @@ test('shows PDF highlights in the Highlights tab and jumps to the page', async (
   await userEvent.click(await screen.findByRole('button', { name: 'Highlights' }))
   await userEvent.click(await screen.findByText(/later bit/))
   expect(screen.getByTestId('pdf-page')).toHaveTextContent('page 4')
+})
+
+test('searches the PDF from the Search tab and jumps to the result', async () => {
+  searchPdf.mockResolvedValue([
+    { id: '2-0', location: '2', excerpt: '…quick brown fox…', label: 'Page 2' },
+  ])
+  renderAt('b1')
+  await screen.findByTestId('pdf-page')
+  await userEvent.click(screen.getByRole('button', { name: /bookmarks/i })) // opens the sidebar
+  await userEvent.click(await screen.findByRole('button', { name: 'Search' }))
+  await userEvent.type(screen.getByPlaceholderText(/search this book/i), 'fox')
+  const searchButtons = screen.getAllByRole('button', { name: 'Search' })
+  await userEvent.click(searchButtons[searchButtons.length - 1])
+  await waitFor(() => expect(searchPdf).toHaveBeenCalledWith('https://signed/b1.pdf', 'fox'))
+  await userEvent.click(await screen.findByText(/quick brown fox/))
+  expect(screen.getByTestId('pdf-page')).toHaveTextContent('page 2')
 })
