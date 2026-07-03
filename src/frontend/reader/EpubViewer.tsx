@@ -28,6 +28,51 @@ const THEME_STYLES: Record<EpubTheme, Record<string, Record<string, string>>> = 
   sepia: { body: { background: '#f4ecd8', color: '#5b4636' } },
 }
 
+const XLINK_NS = 'http://www.w3.org/1999/xlink'
+
+// epub.js resolves in-archive resource references (blob/base64 URLs) for most `<img src>`
+// usages via its own substitution pass, but that pass matches against the manifest's
+// relative-href spelling and commonly misses images referenced as SVG `<image>` elements
+// (a common way books embed chapter-opener graphics) via `href`/`xlink:href`. This hook
+// runs per rendered section and repairs any image reference that's still pointing at an
+// in-archive path (i.e. not already a blob:/data: URL) by resolving it against the
+// section's own <base> and asking the archive for a blob URL directly.
+async function fixUnresolvedArchivedImages(
+  book: ReturnType<typeof ePub>,
+  doc: Document,
+): Promise<void> {
+  const archive = book.archive
+  if (!archive) return
+
+  const baseHref = doc.querySelector('base')?.getAttribute('href') ?? doc.baseURI
+
+  type Candidate = { el: Element; isSvgImage: boolean }
+  const candidates: Candidate[] = []
+  doc.querySelectorAll('img[src]').forEach((el) => { candidates.push({ el, isSvgImage: false }) })
+  doc.querySelectorAll('image').forEach((el) => { candidates.push({ el, isSvgImage: true }) })
+
+  for (const { el, isSvgImage } of candidates) {
+    try {
+      const current = isSvgImage
+        ? (el.getAttributeNS(XLINK_NS, 'href') || el.getAttribute('href'))
+        : el.getAttribute('src')
+      if (!current || current.startsWith('blob:') || current.startsWith('data:')) continue
+
+      const archivePath = new URL(current, baseHref).pathname
+      const url = await archive.createUrl(archivePath, { base64: false })
+
+      if (isSvgImage) {
+        el.setAttribute('href', url)
+        el.setAttributeNS(XLINK_NS, 'xlink:href', url)
+      } else {
+        el.setAttribute('src', url)
+      }
+    } catch {
+      // One bad/unresolvable image shouldn't break the rest of the page.
+    }
+  }
+}
+
 // epub.js's published types claim `locationFromCfi` returns a `Location` object, but at
 // runtime it returns a 0-based location index (number). We report it as a 1-based
 // "page" number so it reads naturally as "current / total".
@@ -81,7 +126,10 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
         const buffer = await res.arrayBuffer()
         if (cancelled || !containerRef.current) return
 
-        book = ePub(buffer)
+        // Archived (in-memory ArrayBuffer/zip) books already default to "blobUrl"
+        // replacements internally, but we set it explicitly so behavior doesn't
+        // depend on that internal default across epubjs versions.
+        book = ePub(buffer, { replacements: 'blobUrl' })
         const rendition = book.renderTo(containerRef.current, {
           width: '100%', height: '100%', flow: 'paginated', spread: 'none',
         })
@@ -91,8 +139,14 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
         }
         rendition.themes.select(theme)
         rendition.themes.fontSize(`${fontSize}%`)
-        void rendition.display(initialCfi ?? undefined)
         const currentBook = book
+        // Belt-and-suspenders fix for archived-image resolution (see
+        // fixUnresolvedArchivedImages doc comment). Registered before display() so it
+        // also applies to the first rendered section.
+        rendition.hooks.content.register((contents: { document: Document }) => {
+          void fixUnresolvedArchivedImages(currentBook, contents.document)
+        })
+        void rendition.display(initialCfi ?? undefined)
         rendition.on('relocated', (loc: { start: { cfi: string } }) => {
           onRelocatedRef.current(loc.start.cfi)
           reportProgressForCfi(currentBook, loc.start.cfi, onProgressRef)
