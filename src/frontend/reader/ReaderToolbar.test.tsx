@@ -34,6 +34,6 @@ test('fires callbacks on click', async () => {
 test('fires onToggleSidebar when the bookmarks sidebar toggle is clicked', async () => {
   const onToggleSidebar = vi.fn()
   render(<ReaderToolbar {...baseProps} onToggleSidebar={onToggleSidebar} />)
-  await userEvent.click(screen.getByRole('button', { name: /bookmarks/i }))
+  await userEvent.click(screen.getByRole('button', { name: /menu/i }))
   expect(onToggleSidebar).toHaveBeenCalled()
 })

@@ -88,7 +88,7 @@ test('toggling contents shows the toc panel with items from the viewer', async (
   act(() => {
     (viewerProps.current?.onToc as (t: unknown) => void)([{ label: 'Ch 1', href: 'c1.xhtml', level: 0 }])
   })
-  await userEvent.click(screen.getByRole('button', { name: /toggle contents/i }))
+  await userEvent.click(screen.getByRole('button', { name: /menu/i }))
   expect(screen.getByRole('button', { name: 'Ch 1' })).toBeInTheDocument()
 })
 
@@ -97,7 +97,7 @@ test('clicking a toc item navigates but keeps the panel open', async () => {
   act(() => {
     (viewerProps.current?.onToc as (t: unknown) => void)([{ label: 'Ch 1', href: 'c1.xhtml', level: 0 }])
   })
-  await userEvent.click(screen.getByRole('button', { name: /toggle contents/i }))
+  await userEvent.click(screen.getByRole('button', { name: /menu/i }))
   await userEvent.click(screen.getByRole('button', { name: 'Ch 1' }))
   expect(goTo).toHaveBeenCalledWith('c1.xhtml')
   expect(screen.getByRole('button', { name: 'Ch 1' })).toBeInTheDocument()
@@ -108,8 +108,8 @@ test('toggling contents again closes the panel', async () => {
   act(() => {
     (viewerProps.current?.onToc as (t: unknown) => void)([{ label: 'Ch 1', href: 'c1.xhtml', level: 0 }])
   })
-  await userEvent.click(screen.getByRole('button', { name: /toggle contents/i }))
-  await userEvent.click(screen.getByRole('button', { name: /toggle contents/i }))
+  await userEvent.click(screen.getByRole('button', { name: /menu/i }))
+  await userEvent.click(screen.getByRole('button', { name: /menu/i }))
   expect(screen.queryByRole('button', { name: 'Ch 1' })).not.toBeInTheDocument()
 })
 
@@ -143,7 +143,7 @@ test('shows bookmarks in the sidebar and jumps via goTo', async () => {
     { id: 'bm1', user_id: 'u1', book_id: 'b1', location: 'epubcfi(/6/20!/4)', label: 'Loc 42', created_at: '', updated_at: '' },
   ])
   await act(async () => { render(<EpubReader bookId="b1" fileUrl="https://x/y.epub" onBack={() => {}} />) })
-  await userEvent.click(screen.getByRole('button', { name: /toggle contents/i }))
+  await userEvent.click(screen.getByRole('button', { name: /menu/i }))
   await userEvent.click(await screen.findByRole('button', { name: 'Bookmarks' }))
   await userEvent.click(await screen.findByRole('button', { name: 'Loc 42' }))
   expect(goTo).toHaveBeenCalledWith('epubcfi(/6/20!/4)')
@@ -164,7 +164,7 @@ test('shows highlights in the Highlights tab and jumps', async () => {
     { id: 'h1', color: 'green', note: null, anchor: { cfiRange: 'epubcfi(hl1)', text: 'saved bit' }, user_id: 'u1', book_id: 'b1', created_at: '', updated_at: '' },
   ])
   await act(async () => { render(<EpubReader bookId="b1" fileUrl="https://x/y.epub" onBack={() => {}} />) })
-  await userEvent.click(screen.getByRole('button', { name: /toggle contents/i }))
+  await userEvent.click(screen.getByRole('button', { name: /menu/i }))
   await userEvent.click(await screen.findByRole('button', { name: 'Highlights' }))
   await userEvent.click(await screen.findByText(/saved bit/))
   expect(goTo).toHaveBeenCalledWith('epubcfi(hl1)')
@@ -175,7 +175,7 @@ test('searches the book from the Search tab and jumps to a result', async () => 
     { id: 'epubcfi(/6/2!/2)', location: 'epubcfi(/6/2!/2)', excerpt: 'a whale swam by' },
   ])
   await act(async () => { render(<EpubReader bookId="b1" fileUrl="https://x/y.epub" onBack={() => {}} />) })
-  await userEvent.click(screen.getByRole('button', { name: /toggle contents/i }))
+  await userEvent.click(screen.getByRole('button', { name: /menu/i }))
   // "Search" labels both the sidebar tab button and (once active) the panel's submit
   // button — the tab is the first "Search"-named button in DOM order.
   const [searchTab] = await screen.findAllByRole('button', { name: 'Search' })

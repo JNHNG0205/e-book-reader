@@ -32,7 +32,7 @@ test('fires nav + toc + back callbacks', async () => {
   const onNext = vi.fn(); const onToggleToc = vi.fn(); const onBack = vi.fn()
   render(<EpubToolbar {...props} onNext={onNext} onToggleToc={onToggleToc} onBack={onBack} />)
   await userEvent.click(screen.getByRole('button', { name: /next/i }))
-  await userEvent.click(screen.getByRole('button', { name: /toggle contents/i }))
+  await userEvent.click(screen.getByRole('button', { name: /menu/i }))
   await userEvent.click(screen.getByRole('button', { name: /library/i }))
   expect(onNext).toHaveBeenCalled()
   expect(onToggleToc).toHaveBeenCalled()

@@ -9,6 +9,7 @@ import { ReaderSidebar } from './ReaderSidebar'
 import { BookmarksPanel } from './BookmarksPanel'
 import { HighlightsPanel } from './HighlightsPanel'
 import { SearchPanel } from './SearchPanel'
+import { ContentsIcon, BookmarkIcon, HighlightIcon, SearchIcon } from './icons'
 import { HighlightPopover } from './HighlightPopover'
 import { BookmarkStar } from './BookmarkStar'
 import type { TocItem } from './epubToc'
@@ -172,28 +173,28 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
           <ReaderSidebar
             onClose={() => setTocOpen(false)}
             tabs={[
-              { key: 'contents', label: 'Contents', render: () => (
+              { key: 'contents', label: 'Contents', icon: <ContentsIcon />, render: () => (
                 <TocPanel
                   items={toc}
                   activeHref={activeHref}
                   onNavigate={(href) => { viewerRef.current?.goTo(href); setActiveHref(href) }}
                 />
               ) },
-              { key: 'bookmarks', label: 'Bookmarks', render: () => (
+              { key: 'bookmarks', label: 'Bookmarks', icon: <BookmarkIcon />, render: () => (
                 <BookmarksPanel
                   bookmarks={bookmarks}
                   onJump={(loc) => viewerRef.current?.goTo(loc)}
                   onDelete={removeBookmark}
                 />
               ) },
-              { key: 'highlights', label: 'Highlights', render: () => (
+              { key: 'highlights', label: 'Highlights', icon: <HighlightIcon />, render: () => (
                 <HighlightsPanel
                   highlights={highlights}
                   onJump={(h) => viewerRef.current?.goTo(String((h.anchor as { cfiRange?: string }).cfiRange ?? ''))}
                   onDelete={removeHighlight}
                 />
               ) },
-              { key: 'search', label: 'Search', render: () => (
+              { key: 'search', label: 'Search', icon: <SearchIcon />, render: () => (
                 <SearchPanel
                   onSearch={(q) => viewerRef.current?.search(q) ?? Promise.resolve([])}
                   onJump={(r) => viewerRef.current?.goTo(r.location)}

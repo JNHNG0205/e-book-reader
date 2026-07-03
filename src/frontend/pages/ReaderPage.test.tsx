@@ -106,7 +106,7 @@ test('opens the sidebar and jumps to a bookmarked page', async () => {
   ])
   renderAt('b1')
   await screen.findByTestId('pdf-page')
-  await userEvent.click(screen.getByRole('button', { name: /bookmarks/i }))
+  await userEvent.click(screen.getByRole('button', { name: /menu/i }))
   await userEvent.click(await screen.findByRole('button', { name: 'Page 3' }))
   expect(screen.getByTestId('pdf-page')).toHaveTextContent('page 3')
 })
@@ -150,7 +150,7 @@ test('shows PDF highlights in the Highlights tab and jumps to the page', async (
   ])
   renderAt('b1')
   await screen.findByTestId('pdf-page')
-  await userEvent.click(screen.getByRole('button', { name: /bookmarks/i })) // opens the sidebar
+  await userEvent.click(screen.getByRole('button', { name: /menu/i })) // opens the sidebar
   await userEvent.click(await screen.findByRole('button', { name: 'Highlights' }))
   await userEvent.click(await screen.findByText(/later bit/))
   expect(screen.getByTestId('pdf-page')).toHaveTextContent('page 4')
@@ -162,7 +162,7 @@ test('searches the PDF from the Search tab and jumps to the result', async () =>
   ])
   renderAt('b1')
   await screen.findByTestId('pdf-page')
-  await userEvent.click(screen.getByRole('button', { name: /bookmarks/i })) // opens the sidebar
+  await userEvent.click(screen.getByRole('button', { name: /menu/i })) // opens the sidebar
   await userEvent.click(await screen.findByRole('button', { name: 'Search' }))
   await userEvent.type(screen.getByPlaceholderText(/search this book/i), 'fox')
   const searchButtons = screen.getAllByRole('button', { name: 'Search' })

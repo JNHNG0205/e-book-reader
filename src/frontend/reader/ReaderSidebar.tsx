@@ -3,6 +3,7 @@ import { useState, type ReactNode } from 'react'
 export interface SidebarTab {
   key: string
   label: string
+  icon?: ReactNode
   render: () => ReactNode
 }
 
@@ -19,10 +20,11 @@ export function ReaderSidebar({ tabs, onClose }: { tabs: SidebarTab[]; onClose: 
               key={t.key}
               type="button"
               onClick={() => setActive(t.key)}
-              className={`shrink-0 whitespace-nowrap px-2.5 py-2 text-sm ${
+              className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap px-2.5 py-2 text-sm ${
                 t.key === current?.key ? 'border-b-2 border-black font-medium' : 'text-gray-500'
               }`}
             >
+              {t.icon}
               {t.label}
             </button>
           ))}

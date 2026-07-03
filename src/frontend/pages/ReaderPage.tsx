@@ -15,6 +15,7 @@ import { HighlightPopover } from '@frontend/reader/HighlightPopover'
 import { BookmarkStar } from '@frontend/reader/BookmarkStar'
 import { SearchPanel } from '@frontend/reader/SearchPanel'
 import { searchPdf } from '@frontend/reader/searchPdf'
+import { BookmarkIcon, HighlightIcon, SearchIcon } from '@frontend/reader/icons'
 import type { NormRect } from '@frontend/reader/pdfHighlightGeometry'
 
 const MIN_SCALE = 0.5
@@ -162,17 +163,17 @@ export function ReaderPage() {
               <ReaderSidebar
                 onClose={() => setSidebarOpen(false)}
                 tabs={[
-                  { key: 'bookmarks', label: 'Bookmarks', render: () => (
+                  { key: 'bookmarks', label: 'Bookmarks', icon: <BookmarkIcon />, render: () => (
                     <BookmarksPanel bookmarks={bookmarks} onJump={jumpToBookmark} onDelete={removeBookmark} />
                   ) },
-                  { key: 'highlights', label: 'Highlights', render: () => (
+                  { key: 'highlights', label: 'Highlights', icon: <HighlightIcon />, render: () => (
                     <HighlightsPanel
                       highlights={highlights}
                       onJump={(h) => { const p = (h.anchor as { page?: number }).page; if (p) setPage(p) }}
                       onDelete={removeHighlight}
                     />
                   ) },
-                  { key: 'search', label: 'Search', render: () => (
+                  { key: 'search', label: 'Search', icon: <SearchIcon />, render: () => (
                     <SearchPanel onSearch={(q) => searchPdf(fileUrl, q)} onJump={(r) => setPage(Number(r.location))} />
                   ) },
                 ]}
