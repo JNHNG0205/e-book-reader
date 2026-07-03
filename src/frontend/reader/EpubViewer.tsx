@@ -33,6 +33,11 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
 ) {
   const containerRef = useRef<HTMLDivElement>(null)
   const renditionRef = useRef<Rendition | null>(null)
+  const onRelocatedRef = useRef(onRelocated)
+  const onTocRef = useRef(onToc)
+
+  useEffect(() => { onRelocatedRef.current = onRelocated }, [onRelocated])
+  useEffect(() => { onTocRef.current = onToc }, [onToc])
 
   useImperativeHandle(ref, () => ({
     next: () => renditionRef.current?.next(),
@@ -54,10 +59,10 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
     rendition.themes.select(theme)
     rendition.themes.fontSize(`${fontSize}%`)
     void rendition.display(initialCfi ?? undefined)
-    rendition.on('relocated', (loc: { start: { cfi: string } }) => onRelocated(loc.start.cfi))
-    void book.loaded.navigation.then((nav: { toc: Parameters<typeof flattenToc>[0] }) => {
-      onToc(flattenToc(nav.toc))
-    })
+    rendition.on('relocated', (loc: { start: { cfi: string } }) => onRelocatedRef.current(loc.start.cfi))
+    void book.loaded.navigation
+      .then((nav: { toc: Parameters<typeof flattenToc>[0] }) => { onTocRef.current(flattenToc(nav.toc)) })
+      .catch(() => { /* navigation failed to load; leave toc empty */ })
     return () => { book.destroy() }
     // Intentionally only re-create when the file changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
