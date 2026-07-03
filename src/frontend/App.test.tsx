@@ -7,6 +7,9 @@ vi.mock('@frontend/auth/useSession', () => ({ useSession: () => useSession() }))
 vi.mock('@frontend/reader/PdfViewer', () => ({
   PdfViewer: () => <div data-testid="pdf-viewer" />,
 }))
+vi.mock('@frontend/library/coverExtract', () => ({
+  extractCoverBlob: vi.fn().mockResolvedValue(null),
+}))
 
 test('renders the app title', () => {
   useSession.mockReturnValue({ session: { user: { id: 'u1' } }, loading: false })

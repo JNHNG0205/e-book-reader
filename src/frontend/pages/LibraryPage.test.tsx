@@ -4,21 +4,38 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
 
 // vi.mock is hoisted; create mock fns via vi.hoisted() so the factory can use them.
-const { listBooks, uploadBook, deleteBook, renameBook } = vi.hoisted(() => ({
+const {
+  listBooks, uploadBook, deleteBook, renameBook, getCoverUrl, getBookFileUrl, saveCover,
+} = vi.hoisted(() => ({
   listBooks: vi.fn(),
   uploadBook: vi.fn(),
   deleteBook: vi.fn(),
   renameBook: vi.fn(),
+  getCoverUrl: vi.fn(),
+  getBookFileUrl: vi.fn(),
+  saveCover: vi.fn(),
 }))
-vi.mock('@backend/data/books', () => ({ listBooks, uploadBook, deleteBook, renameBook }))
+vi.mock('@backend/data/books', () => ({
+  listBooks, uploadBook, deleteBook, renameBook, getCoverUrl, getBookFileUrl, saveCover,
+}))
+
+const { extractCoverBlob } = vi.hoisted(() => ({ extractCoverBlob: vi.fn() }))
+vi.mock('@frontend/library/coverExtract', () => ({ extractCoverBlob }))
 
 import { LibraryPage } from './LibraryPage'
 
 beforeEach(() => {
   vi.clearAllMocks()
   listBooks.mockResolvedValue([
-    { id: 'b1', title: 'Dune', author: 'Herbert', format: 'pdf', cover_path: null },
+    { id: 'b1', title: 'Dune', author: 'Herbert', format: 'pdf', cover_path: null, storage_path: 'books/b1.pdf' },
   ])
+  getBookFileUrl.mockResolvedValue('https://example.com/b1.pdf')
+  getCoverUrl.mockResolvedValue('https://example.com/signed-cover.png')
+  saveCover.mockResolvedValue('covers/b1.png')
+  extractCoverBlob.mockResolvedValue(null)
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+    arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
+  }))
 })
 
 test('renders books from the repository', async () => {
@@ -53,4 +70,26 @@ test('clicking a book navigates to its reader route', async () => {
   )
   await userEvent.click(await screen.findByRole('button', { name: 'Dune' }))
   expect(await screen.findByText('reader for book')).toBeInTheDocument()
+})
+
+test('resolves a signed cover url for a book that already has a cover_path', async () => {
+  listBooks.mockResolvedValue([
+    { id: 'b1', title: 'Dune', author: 'Herbert', format: 'pdf', cover_path: 'covers/b1.png', storage_path: 'books/b1.pdf' },
+  ])
+  const { container } = render(<MemoryRouter><LibraryPage /></MemoryRouter>)
+  await screen.findByText('Dune')
+  await waitFor(() => expect(getCoverUrl).toHaveBeenCalledWith('covers/b1.png'))
+  expect(getBookFileUrl).not.toHaveBeenCalled()
+  await waitFor(() => expect(container.querySelector('img')).toHaveAttribute('src', 'https://example.com/signed-cover.png'))
+})
+
+test('backfills a cover for a book without cover_path by extracting one from its file', async () => {
+  extractCoverBlob.mockResolvedValue(new Blob(['fake']))
+  const { container } = render(<MemoryRouter><LibraryPage /></MemoryRouter>)
+  await screen.findByText('Dune')
+  await waitFor(() => expect(saveCover).toHaveBeenCalledWith('b1', expect.any(Blob)))
+  expect(getBookFileUrl).toHaveBeenCalledWith('books/b1.pdf')
+  expect(extractCoverBlob).toHaveBeenCalled()
+  expect(getCoverUrl).toHaveBeenCalledWith('covers/b1.png')
+  await waitFor(() => expect(container.querySelector('img')).toHaveAttribute('src', 'https://example.com/signed-cover.png'))
 })

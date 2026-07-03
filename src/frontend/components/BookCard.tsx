@@ -1,9 +1,10 @@
 import type { Book } from '@shared/types'
 
 export function BookCard({
-  book, onOpen, onRename, onDelete,
+  book, coverUrl, onOpen, onRename, onDelete,
 }: {
   book: Book
+  coverUrl?: string | null
   onOpen: (id: string) => void
   onRename: (id: string, title: string) => void
   onDelete: (id: string) => void
@@ -13,9 +14,13 @@ export function BookCard({
       <button
         type="button"
         onClick={() => onOpen(book.id)}
-        className="mb-2 flex aspect-[3/4] items-center justify-center rounded bg-gray-100 text-gray-400 hover:bg-gray-200"
+        className="mb-2 flex aspect-[3/4] items-center justify-center overflow-hidden rounded bg-gray-100 text-gray-400 hover:bg-gray-200"
       >
-        {book.format.toUpperCase()}
+        {coverUrl ? (
+          <img src={coverUrl} alt="" className="h-full w-full rounded object-cover" />
+        ) : (
+          book.format.toUpperCase()
+        )}
       </button>
       <button type="button" onClick={() => onOpen(book.id)} className="text-left font-medium hover:underline">
         {book.title}
