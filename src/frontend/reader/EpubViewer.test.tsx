@@ -297,25 +297,31 @@ test('applies saved highlights as annotations', async () => {
   )
 })
 
-test('reports a text selection via onSelect', async () => {
+test('reports a text selection on mouseup via onSelect', async () => {
   const onSelect = vi.fn()
-  // Provide a fake contents with a selection + frameElement offset.
+  // A real jsdom document (so addEventListener/dispatchEvent work) + a fake window
+  // selection and cfiFromRange, matching what epub.js passes a content hook.
+  const doc = document.implementation.createHTMLDocument('section')
   const fakeContents = {
+    document: doc,
     window: {
       getSelection: () => ({
+        rangeCount: 1,
         toString: () => 'selected words',
-        getRangeAt: () => ({ getBoundingClientRect: () => ({ left: 100, top: 50, width: 40, height: 12 }) }),
+        getRangeAt: () => ({ collapsed: false, getBoundingClientRect: () => ({ left: 100, top: 50, width: 40, height: 12 }) }),
         removeAllRanges: () => {},
       }),
       frameElement: { getBoundingClientRect: () => ({ left: 10, top: 20 }) },
     },
+    cfiFromRange: () => 'epubcfi(sel)',
   }
   render(
     <EpubViewer fileUrl="https://x/y.epub"
       fontSize={100} theme="light" onRelocated={() => {}} onToc={() => {}} onSelect={onSelect} />,
   )
-  await vi.waitFor(() => expect(selectedHandlers.length).toBeGreaterThan(0))
-  selectedHandlers[0]?.('epubcfi(sel)', fakeContents)
+  await vi.waitFor(() => expect(contentHandlers.length).toBeGreaterThan(0))
+  contentHandlers[0](fakeContents as unknown as { document: Document })
+  doc.dispatchEvent(new Event('mouseup'))
   expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({
     cfiRange: 'epubcfi(sel)', text: 'selected words',
   }))

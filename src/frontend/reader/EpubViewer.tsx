@@ -214,6 +214,53 @@ function selectionPosition(contents: {
   return { x: fx + (rect?.left ?? 0) + (rect?.width ?? 0) / 2, y: fy + (rect?.top ?? 0) }
 }
 
+interface SelectionWindow {
+  getSelection: () => {
+    rangeCount: number
+    toString: () => string
+    getRangeAt: (i: number) => { collapsed?: boolean; getBoundingClientRect: () => DOMRect }
+    removeAllRanges: () => void
+  } | null
+  frameElement?: { getBoundingClientRect: () => { left: number; top: number } } | null
+}
+
+// The `contents` epub.js passes to a content hook — its `window`/`cfiFromRange` are only
+// present for real rendered sections (jsdom-only test docs omit them).
+interface HookContents {
+  document: Document
+  window?: SelectionWindow
+  cfiFromRange?: (range: unknown) => string
+}
+
+// epub.js's own `selected` event is debounced ~250ms, so the popover lagged behind the
+// cursor. Instead we listen for mouseup/touchend on each section document and, if there's
+// a non-empty selection, compute its CFI + position immediately — so the color popover
+// appears the moment you release the cursor.
+function attachSelectionHandler(
+  contents: HookContents,
+  onSelectRef: { current?: (s: { cfiRange: string; text: string; x: number; y: number }) => void },
+  selectionWindowRef: { current: SelectionWindow | null },
+): void {
+  const win = contents.window
+  const cfiFromRange = contents.cfiFromRange
+  if (!win || !cfiFromRange) return
+  const handler = (): void => {
+    const sel = win.getSelection()
+    if (!sel || sel.rangeCount === 0) return
+    const range = sel.getRangeAt(0)
+    if (range.collapsed) return
+    const text = sel.toString().trim()
+    if (!text) return
+    let cfiRange: string
+    try { cfiRange = cfiFromRange(range) } catch { return }
+    const { x, y } = selectionPosition({ window: win })
+    selectionWindowRef.current = win
+    onSelectRef.current?.({ cfiRange, text, x, y })
+  }
+  contents.document.addEventListener('mouseup', handler)
+  contents.document.addEventListener('touchend', handler)
+}
+
 // Diffs `highlights` against the ids already applied as epub.js annotations, removing
 // ones that were deleted or recolored and adding new/changed ones — so re-renders don't
 // blindly re-add every highlight (which would leak duplicate marks in the iframe).
@@ -270,7 +317,7 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
   const onSelectRef = useRef(onSelect)
   // The window of the section where text was last selected, so clearSelection() can
   // clear it after the color popover is dismissed.
-  const selectionWindowRef = useRef<{ getSelection: () => { removeAllRanges: () => void } | null } | null>(null)
+  const selectionWindowRef = useRef<SelectionWindow | null>(null)
   const onHighlightClickRef = useRef(onHighlightClick)
   const appliedRef = useRef(new Map<string, AppliedAnnotation>())
   const [error, setError] = useState<string | null>(null)
@@ -320,32 +367,17 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
         const currentBook = book
         // Repair archived <img> references epub.js leaves unresolved. Registered before
         // display() so it also runs for the first rendered section.
-        rendition.hooks.content.register((contents: { document: Document }) => {
+        rendition.hooks.content.register((contents: HookContents) => {
           void fixArchivedImages(currentBook, contents.document)
+          // Fire the color popover on mouseup (instant), not epub.js's debounced
+          // `selected`. The native selection stays visible until the popover is dismissed.
+          attachSelectionHandler(contents, onSelectRef, selectionWindowRef)
         })
         void rendition.display(initialCfi ?? undefined)
         rendition.on('relocated', (loc: { start: { cfi: string; href?: string } }) => {
           onRelocatedRef.current(loc.start.cfi)
           reportProgressForCfi(currentBook, loc.start.cfi, onProgressRef)
           if (loc.start.href) onSectionRef.current?.(loc.start.href)
-        })
-        rendition.on('selected', (cfiRange: string, contents: {
-          window: {
-            getSelection: () => {
-              toString: () => string
-              getRangeAt: (i: number) => { getBoundingClientRect: () => DOMRect }
-              removeAllRanges: () => void
-            } | null
-            frameElement?: { getBoundingClientRect: () => { left: number; top: number } } | null
-          }
-        }) => {
-          const selection = contents.window.getSelection()
-          const text = selection?.toString() ?? ''
-          const { x, y } = selectionPosition(contents)
-          // Keep the native selection visible while the color popover is open (so the
-          // user can see what they're highlighting); it's cleared on popover dismiss.
-          selectionWindowRef.current = contents.window
-          onSelectRef.current?.({ cfiRange, text, x, y })
         })
         appliedRef.current = new Map<string, AppliedAnnotation>()
         syncAnnotations(rendition, highlights ?? [], appliedRef.current, onHighlightClickRef)
