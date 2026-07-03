@@ -3,10 +3,10 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
 
-const { getBook, getBookFileUrl } = vi.hoisted(() => ({
-  getBook: vi.fn(), getBookFileUrl: vi.fn(),
-}))
-vi.mock('@backend/data/books', () => ({ getBook, getBookFileUrl }))
+const { getBook } = vi.hoisted(() => ({ getBook: vi.fn() }))
+vi.mock('@backend/data/books', () => ({ getBook }))
+const { loadBookObjectUrl } = vi.hoisted(() => ({ loadBookObjectUrl: vi.fn() }))
+vi.mock('@frontend/offline/loadBook', () => ({ loadBookObjectUrl }))
 const { getProgress, saveProgress } = vi.hoisted(() => ({
   getProgress: vi.fn(), saveProgress: vi.fn(),
 }))
@@ -54,7 +54,8 @@ function renderAt(bookId: string) {
 beforeEach(() => {
   vi.clearAllMocks()
   getBook.mockResolvedValue({ id: 'b1', title: 'Dune', format: 'pdf', storage_path: 'u1/b1.pdf' })
-  getBookFileUrl.mockResolvedValue('https://signed/b1.pdf')
+  loadBookObjectUrl.mockResolvedValue('https://signed/b1.pdf')
+  URL.revokeObjectURL = vi.fn()
   getProgress.mockResolvedValue(null)
   saveProgress.mockResolvedValue(undefined)
   listBookmarks.mockResolvedValue([])
@@ -81,7 +82,7 @@ test('next page advances the rendered page', async () => {
 
 test('renders the EpubReader for an EPUB with its file url', async () => {
   getBook.mockResolvedValue({ id: 'b2', title: 'Novel', format: 'epub', storage_path: 'u1/b2.epub' })
-  getBookFileUrl.mockResolvedValue('https://signed/b2.epub')
+  loadBookObjectUrl.mockResolvedValue('https://signed/b2.epub')
   renderAt('b2')
   const reader = await screen.findByTestId('epub-reader')
   expect(reader).toHaveTextContent('b2:https://signed/b2.epub')
@@ -170,4 +171,11 @@ test('searches the PDF from the Search tab and jumps to the result', async () =>
   await waitFor(() => expect(searchPdf).toHaveBeenCalledWith('https://signed/b1.pdf', 'fox'))
   await userEvent.click(await screen.findByText(/quick brown fox/))
   expect(screen.getByTestId('pdf-page')).toHaveTextContent('page 2')
+})
+
+test('shows an offline-unavailable error when loadBookObjectUrl rejects', async () => {
+  loadBookObjectUrl.mockRejectedValue(new Error('offline'))
+  renderAt('b1')
+  expect(await screen.findByRole('alert')).toHaveTextContent(/offline|reconnect/i)
+  expect(screen.queryByText('Loading…')).not.toBeInTheDocument()
 })

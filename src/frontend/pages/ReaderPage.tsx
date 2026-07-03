@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { Book, Bookmark, Highlight } from '@shared/types'
-import { getBook, getBookFileUrl } from '@backend/data/books'
+import { getBook } from '@backend/data/books'
+import { loadBookObjectUrl } from '@frontend/offline/loadBook'
 import { getProgress, saveProgress } from '@backend/data/progress'
 import { listBookmarks, saveBookmark, deleteBookmark } from '@backend/data/bookmarks'
 import { listHighlights, saveHighlight, updateHighlight, deleteHighlight } from '@backend/data/highlights'
@@ -38,6 +39,8 @@ export function ReaderPage() {
     id?: string; color?: string; note?: string | null
   }>(null)
 
+  const objectUrlRef = useRef<string | null>(null)
+
   useEffect(() => {
     if (!bookId) return
     let active = true
@@ -46,7 +49,19 @@ export function ReaderPage() {
         const b = await getBook(bookId)
         if (!active) return
         setBook(b)
-        setFileUrl(await getBookFileUrl(b.storage_path))
+        let objectUrl: string
+        try {
+          objectUrl = await loadBookObjectUrl(b.id, b.storage_path, b.format)
+        } catch {
+          if (active) setError('This book isn’t available offline. Reconnect to open it the first time.')
+          return
+        }
+        if (!active) {
+          URL.revokeObjectURL(objectUrl)
+          return
+        }
+        objectUrlRef.current = objectUrl
+        setFileUrl(objectUrl)
         if (b.format === 'pdf') {
           const saved = await getProgress(bookId)
           if (active && saved) setPage(Math.max(1, parseInt(saved, 10) || 1))
@@ -55,7 +70,13 @@ export function ReaderPage() {
         if (active) setError((e as Error).message)
       }
     })()
-    return () => { active = false }
+    return () => {
+      active = false
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current)
+        objectUrlRef.current = null
+      }
+    }
   }, [bookId])
 
   const didMount = useRef(false)
