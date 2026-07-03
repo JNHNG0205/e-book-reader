@@ -14,7 +14,7 @@ order; each assumes the previous is complete.
 | 3 | **EPUB reader** | Open an EPUB, reflowable render, font/theme + dark mode, TOC, progress + resume. Shared reader chrome unified with M2. | [`2026-07-03-milestone-3-epub-reader.md`](./2026-07-03-milestone-3-epub-reader.md) |
 | 4a | **Bookmarks** | Bookmark current location (PDF page / EPUB CFI), tabbed sidebar (Contents/Bookmarks), list/jump/delete. | [`2026-07-03-milestone-4a-bookmarks.md`](./2026-07-03-milestone-4a-bookmarks.md) |
 | 4b-1 | **EPUB highlights** | Select-text color popover, notes, edit/delete, Highlights sidebar tab (filter/jump). EPUB via epub.js CFI ranges + annotations. | [`2026-07-03-milestone-4b1-epub-highlights.md`](./2026-07-03-milestone-4b1-epub-highlights.md) |
-| 4b-2 | **PDF highlights** | Same highlight UX for PDF: text-layer selection → normalized rects → overlay render. Reuses the highlights repo/popover/panel. | _written after M4b-1_ |
+| 4b-2 | **PDF highlights** | Same highlight UX for PDF: text-layer selection → normalized rects → overlay render. Reuses the highlights repo/popover/panel. | [`2026-07-03-milestone-4b2-pdf-highlights.md`](./2026-07-03-milestone-4b2-pdf-highlights.md) |
 | 5 | **In-book search** | Search within the open book for both formats. | _written after M4_ |
 | 6 | **Offline-first + PWA** | Installable PWA, offline book caching, local-first store (Legend-State) with background sync + last-write-wins. | _written after M4_ |
 | 7 | **Deploy** | Vercel + Supabase production config, migrations checked in, smoke test. | _written after M6_ |
