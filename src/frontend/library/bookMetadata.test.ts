@@ -45,6 +45,24 @@ test('extracts title/author from a PDF', async () => {
   expect(result).toEqual({ title: 'PDF Title', author: 'PDF Author' })
 })
 
+test('passes a COPY of the buffer to pdfjs (does not detach the shared buffer)', async () => {
+  let passedBuffer: ArrayBufferLike | null = null
+  getDocument.mockImplementation((params: { data: Uint8Array }) => {
+    passedBuffer = params.data.buffer
+    return {
+      promise: Promise.resolve({
+        getMetadata: () => Promise.resolve({ info: {} }),
+      }),
+    }
+  })
+
+  const input = new ArrayBuffer(8)
+  await extractBookMetadata(input, 'pdf')
+
+  expect(passedBuffer).not.toBeNull()
+  expect(passedBuffer).not.toBe(input) // a copy, so the original stays usable for cover extraction
+})
+
 test('returns nulls when extraction throws', async () => {
   metadata.mockRejectedValue(new Error('boom'))
 

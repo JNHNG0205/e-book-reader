@@ -22,7 +22,9 @@ async function extractEpubCover(buffer: ArrayBuffer): Promise<Blob | null> {
 }
 
 async function extractPdfCover(buffer: ArrayBuffer): Promise<Blob | null> {
-  const pdf = await pdfjs.getDocument({ data: new Uint8Array(buffer) }).promise
+  // pdfjs transfers (detaches) the ArrayBuffer to its worker, so pass a copy — otherwise
+  // the caller's buffer is left empty for any later use.
+  const pdf = await pdfjs.getDocument({ data: new Uint8Array(buffer.slice(0)) }).promise
   const page = await pdf.getPage(1)
   const viewport = page.getViewport({ scale: 1 })
   const scale = 600 / Math.max(viewport.width, viewport.height)

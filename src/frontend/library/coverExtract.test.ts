@@ -75,6 +75,29 @@ test('extractCoverBlob returns a Blob for a PDF', async () => {
   expect(result).toBe(fakeBlob)
 })
 
+test('extractCoverBlob passes a COPY of the buffer to pdfjs (does not detach the shared buffer)', async () => {
+  let passedBuffer: ArrayBufferLike | null = null
+  getDocument.mockImplementation((params: { data: Uint8Array }) => {
+    passedBuffer = params.data.buffer
+    return {
+      promise: Promise.resolve({
+        getPage: () => Promise.resolve({
+          getViewport: () => ({ width: 400, height: 600 }),
+          render: () => ({ promise: Promise.resolve() }),
+        }),
+      }),
+    }
+  })
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({} as unknown as CanvasRenderingContext2D)
+  vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((cb) => cb(new Blob(['x'])))
+
+  const input = new ArrayBuffer(8)
+  await extractCoverBlob(input, 'pdf')
+
+  expect(passedBuffer).not.toBeNull()
+  expect(passedBuffer).not.toBe(input) // a copy, so the original stays usable
+})
+
 test('extractCoverBlob returns null when extraction throws', async () => {
   coverUrl.mockRejectedValue(new Error('boom'))
 

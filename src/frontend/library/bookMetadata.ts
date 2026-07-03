@@ -23,7 +23,9 @@ async function extractEpubMetadata(buffer: ArrayBuffer): Promise<BookMetadata> {
 }
 
 async function extractPdfMetadata(buffer: ArrayBuffer): Promise<BookMetadata> {
-  const pdf = await pdfjs.getDocument({ data: new Uint8Array(buffer) }).promise
+  // pdfjs transfers (detaches) the ArrayBuffer to its worker, so pass a copy — otherwise
+  // the caller's buffer is left empty for any later use (e.g. cover extraction).
+  const pdf = await pdfjs.getDocument({ data: new Uint8Array(buffer.slice(0)) }).promise
   const { info } = (await pdf.getMetadata()) as {
     info: { Title?: string; Author?: string }
   }
