@@ -329,3 +329,21 @@ test('reports a text selection on mouseup via onSelect', async () => {
     cfiRange: 'epubcfi(sel)', text: 'selected words',
   }))
 })
+
+test('dismisses on a new mousedown inside the book', async () => {
+  const onDismiss = vi.fn()
+  const doc = document.implementation.createHTMLDocument('section')
+  const fakeContents = {
+    document: doc,
+    window: { getSelection: () => null, frameElement: null },
+    cfiFromRange: () => 'epubcfi(x)',
+  }
+  render(
+    <EpubViewer fileUrl="https://x/y.epub"
+      fontSize={100} theme="light" onRelocated={() => {}} onToc={() => {}} onDismiss={onDismiss} />,
+  )
+  await vi.waitFor(() => expect(contentHandlers.length).toBeGreaterThan(0))
+  contentHandlers[0](fakeContents as unknown as { document: Document })
+  doc.dispatchEvent(new Event('mousedown'))
+  expect(onDismiss).toHaveBeenCalled()
+})

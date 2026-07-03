@@ -32,6 +32,8 @@ export interface EpubViewerProps {
   highlights?: Array<{ id: string; cfiRange: string; color: string }>
   // Fired when the user selects text in the rendered book.
   onSelect?: (sel: { cfiRange: string; text: string; x: number; y: number }) => void
+  // Fired on a new click/tap inside the book, so the reader can dismiss an open popover.
+  onDismiss?: () => void
   // Fired when a rendered highlight annotation is clicked.
   onHighlightClick?: (id: string, x: number, y: number) => void
 }
@@ -239,6 +241,7 @@ interface HookContents {
 function attachSelectionHandler(
   contents: HookContents,
   onSelectRef: { current?: (s: { cfiRange: string; text: string; x: number; y: number }) => void },
+  onDismissRef: { current?: (() => void) | undefined },
   selectionWindowRef: { current: SelectionWindow | null },
 ): void {
   const win = contents.window
@@ -258,6 +261,13 @@ function attachSelectionHandler(
     selectionWindowRef.current = win
     onSelectRef.current?.({ cfiRange, text, x, y })
   }
+  // Any new click/tap inside the book dismisses an open popover. A subsequent mouseup
+  // that produced a selection re-opens it; a click that produced none leaves it closed
+  // (so cancelling a selection closes the palette). Parent-document outside-clicks are
+  // handled separately by the popover itself.
+  const dismiss = (): void => onDismissRef.current?.()
+  contents.document.addEventListener('mousedown', dismiss)
+  contents.document.addEventListener('touchstart', dismiss)
   contents.document.addEventListener('mouseup', handler)
   contents.document.addEventListener('touchend', handler)
 }
@@ -304,7 +314,7 @@ function syncAnnotations(
 export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function EpubViewer(
   {
     fileUrl, bookId, initialCfi, fontSize, theme, onRelocated, onToc, onProgress, onSection,
-    highlights, onSelect, onHighlightClick,
+    highlights, onSelect, onHighlightClick, onDismiss,
   },
   ref,
 ) {
@@ -316,6 +326,7 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
   const onProgressRef = useRef(onProgress)
   const onSectionRef = useRef(onSection)
   const onSelectRef = useRef(onSelect)
+  const onDismissRef = useRef(onDismiss)
   // The window of the section where text was last selected, so clearSelection() can
   // clear it after the color popover is dismissed.
   const selectionWindowRef = useRef<SelectionWindow | null>(null)
@@ -328,6 +339,7 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
   useEffect(() => { onProgressRef.current = onProgress }, [onProgress])
   useEffect(() => { onSectionRef.current = onSection }, [onSection])
   useEffect(() => { onSelectRef.current = onSelect }, [onSelect])
+  useEffect(() => { onDismissRef.current = onDismiss }, [onDismiss])
   useEffect(() => { onHighlightClickRef.current = onHighlightClick }, [onHighlightClick])
 
   useImperativeHandle(ref, () => ({
@@ -372,7 +384,7 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
           void fixArchivedImages(currentBook, contents.document)
           // Fire the color popover on mouseup (instant), not epub.js's debounced
           // `selected`. The native selection stays visible until the popover is dismissed.
-          attachSelectionHandler(contents, onSelectRef, selectionWindowRef)
+          attachSelectionHandler(contents, onSelectRef, onDismissRef, selectionWindowRef)
         })
         void rendition.display(initialCfi ?? undefined)
         rendition.on('relocated', (loc: { start: { cfi: string; href?: string } }) => {

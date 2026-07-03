@@ -209,6 +209,7 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
             onToc={setToc}
             onProgress={setProgress}
             onSection={handleSection}
+            onDismiss={() => setPopover(null)}
             highlights={viewerHighlights}
             onSelect={(s) => setPopover({ mode: 'create', x: s.x, y: s.y, cfiRange: s.cfiRange, text: s.text })}
             onHighlightClick={(id, x, y) => {
