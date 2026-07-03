@@ -5,8 +5,9 @@ import {
 } from 'vitest'
 
 // Shared fake rendition/book captured per test.
-const { rendition, book: _book, ePub, relocatedHandlers } = vi.hoisted(() => {
+const { rendition, book: _book, ePub, relocatedHandlers, contentHandlers } = vi.hoisted(() => {
   const relocatedHandlers: Array<(loc: { start: { cfi: string } }) => void> = []
+  const contentHandlers: Array<(contents: { document: Document }) => void> = []
   const rendition = {
     display: vi.fn().mockResolvedValue(undefined),
     next: vi.fn(),
@@ -14,6 +15,11 @@ const { rendition, book: _book, ePub, relocatedHandlers } = vi.hoisted(() => {
     on: vi.fn((event: string, cb: (loc: { start: { cfi: string } }) => void) => {
       if (event === 'relocated') relocatedHandlers.push(cb)
     }),
+    hooks: {
+      content: {
+        register: vi.fn((cb: (contents: { document: Document }) => void) => { contentHandlers.push(cb) }),
+      },
+    },
     themes: { fontSize: vi.fn(), register: vi.fn(), select: vi.fn() },
     destroy: vi.fn(),
     currentLocation: vi.fn(() => ({ start: { cfi: 'epubcfi(x)' } })),
@@ -28,9 +34,13 @@ const { rendition, book: _book, ePub, relocatedHandlers } = vi.hoisted(() => {
       length: vi.fn(() => 100),
       locationFromCfi: vi.fn(() => 11),
     },
+    resources: {
+      urls: ['images/00013.jpg', 'style.css'],
+      get: vi.fn().mockResolvedValue('blob:fake-image'),
+    },
   }
   const ePub = vi.fn(() => book)
-  return { rendition, book, ePub, relocatedHandlers }
+  return { rendition, book, ePub, relocatedHandlers, contentHandlers }
 })
 vi.mock('epubjs', () => ({ default: ePub }))
 
@@ -39,6 +49,7 @@ import { EpubViewer, type EpubViewerHandle } from './EpubViewer'
 beforeEach(() => {
   vi.clearAllMocks()
   relocatedHandlers.length = 0
+  contentHandlers.length = 0
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
     ok: true,
     arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
@@ -121,6 +132,40 @@ test('reports progress once locations generate', async () => {
   await vi.waitFor(() => {
     expect(onProgress).toHaveBeenCalledWith({ current: 12, total: 100 })
   })
+})
+
+test('resolves an archived <img> to its blob url on content render', async () => {
+  render(
+    <EpubViewer fileUrl="https://x/y.epub"
+      fontSize={100} theme="light" onRelocated={() => {}} onToc={() => {}} />,
+  )
+  // The content hook is registered during async setup.
+  await vi.waitFor(() => expect(contentHandlers.length).toBeGreaterThan(0))
+
+  // A section document whose image epub.js left as a relative in-archive path.
+  const doc = document.implementation.createHTMLDocument('section')
+  doc.body.innerHTML = '<p><img src="images/00013.jpg" class="calibre_3"></p>'
+  contentHandlers[0]({ document: doc })
+
+  await vi.waitFor(() => {
+    expect(doc.querySelector('img')?.getAttribute('src')).toBe('blob:fake-image')
+  })
+})
+
+test('leaves already-resolved (blob:) images untouched', async () => {
+  render(
+    <EpubViewer fileUrl="https://x/y.epub"
+      fontSize={100} theme="light" onRelocated={() => {}} onToc={() => {}} />,
+  )
+  await vi.waitFor(() => expect(contentHandlers.length).toBeGreaterThan(0))
+
+  const doc = document.implementation.createHTMLDocument('section')
+  doc.body.innerHTML = '<img src="blob:already-resolved">'
+  contentHandlers[0]({ document: doc })
+
+  // Give any (unexpected) async work a tick, then confirm it was not rewritten.
+  await Promise.resolve()
+  expect(doc.querySelector('img')?.getAttribute('src')).toBe('blob:already-resolved')
 })
 
 test('shows an error when the file fails to fetch', async () => {
