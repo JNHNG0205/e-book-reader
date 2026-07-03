@@ -42,6 +42,19 @@ const THEME_STYLES: Record<EpubTheme, Record<string, Record<string, string>>> = 
   sepia: { body: { background: '#f4ecd8', color: '#5b4636' } },
 }
 
+// epub.js's registerRules/select theme path injects empty CSS for some books (the
+// background never changes). `themes.override` instead sets the property directly on
+// each rendered section's <body> with !important, applies immediately to current
+// sections, and re-applies to new ones — so theme switches actually change the page.
+function applyEpubTheme(rendition: Rendition, theme: EpubTheme): void {
+  const body = THEME_STYLES[theme].body
+  const themes = rendition.themes as unknown as {
+    override: (name: string, value: string, priority?: boolean) => void
+  }
+  themes.override('color', body.color, true)
+  themes.override('background', body.background, true)
+}
+
 const XLINK_NS = 'http://www.w3.org/1999/xlink'
 
 // epub.js substitutes most in-archive resource URLs (e.g. stylesheet <link>s become
@@ -182,10 +195,7 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
           width: '100%', height: '100%', flow: 'paginated', spread: 'none',
         })
         renditionRef.current = rendition
-        for (const [name, styles] of Object.entries(THEME_STYLES)) {
-          rendition.themes.register(name, styles)
-        }
-        rendition.themes.select(theme)
+        applyEpubTheme(rendition, theme)
         rendition.themes.fontSize(`${fontSize}%`)
         const currentBook = book
         // Repair archived <img> references epub.js leaves unresolved. Registered before
@@ -238,7 +248,10 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
   // Apply font size when it changes.
   useEffect(() => { renditionRef.current?.themes.fontSize(`${fontSize}%`) }, [fontSize])
   // Apply theme when it changes.
-  useEffect(() => { renditionRef.current?.themes.select(theme) }, [theme])
+  useEffect(() => {
+    const r = renditionRef.current
+    if (r) applyEpubTheme(r, theme)
+  }, [theme])
 
   if (error) {
     return <div className="p-8 text-red-600" role="alert">{error}</div>

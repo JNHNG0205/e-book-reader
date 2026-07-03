@@ -20,7 +20,7 @@ const { rendition, book: _book, ePub, relocatedHandlers, contentHandlers } = vi.
         register: vi.fn((cb: (contents: { document: Document }) => void) => { contentHandlers.push(cb) }),
       },
     },
-    themes: { fontSize: vi.fn(), register: vi.fn(), select: vi.fn() },
+    themes: { fontSize: vi.fn(), register: vi.fn(), select: vi.fn(), override: vi.fn() },
     destroy: vi.fn(),
     currentLocation: vi.fn(() => ({ start: { cfi: 'epubcfi(x)' } })),
   }
@@ -134,6 +134,17 @@ test('reports progress once locations generate', async () => {
   )
   await vi.waitFor(() => {
     expect(onProgress).toHaveBeenCalledWith({ current: 12, total: 100 })
+  })
+})
+
+test('applies the theme background + color to the section body via override', async () => {
+  render(
+    <EpubViewer fileUrl="https://x/y.epub"
+      fontSize={100} theme="dark" onRelocated={() => {}} onToc={() => {}} />,
+  )
+  await vi.waitFor(() => {
+    expect(rendition.themes.override).toHaveBeenCalledWith('background', '#111111', true)
+    expect(rendition.themes.override).toHaveBeenCalledWith('color', '#e5e5e5', true)
   })
 })
 
