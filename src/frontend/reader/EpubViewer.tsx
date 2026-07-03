@@ -51,6 +51,26 @@ const XLINK_NS = 'http://www.w3.org/1999/xlink'
 // it matches each image to its manifest entry (by filename) and swaps in the blob URL
 // epub.js already created for that resource via `resources.get` — reusing epub.js's own
 // resolution rather than guessing archive paths.
+// Any image we can't resolve (or that later fails to load) is replaced with a small
+// centered divider bar rather than the browser's broken-image icon — most of these are
+// decorative section-break ornaments, so a divider reads as intentional. `currentColor`
+// keeps it visible across the light/dark/sepia themes.
+function makeDivider(doc: Document): HTMLElement {
+  const div = doc.createElement('div')
+  div.setAttribute('data-broken-image', 'true')
+  div.style.cssText =
+    'width:48px;height:4px;margin:1.5em auto;background:currentColor;opacity:0.55;border-radius:2px;'
+  return div
+}
+
+function replaceWithDivider(el: Element): void {
+  // For an SVG <image>, swap out the whole <svg> wrapper (a bare div inside SVG won't render).
+  const target = el.tagName.toLowerCase() === 'image' ? el.closest('svg') ?? el : el
+  const doc = target.ownerDocument
+  if (!doc || !target.parentNode) return
+  target.replaceWith(makeDivider(doc))
+}
+
 async function fixArchivedImages(book: ReturnType<typeof ePub>, doc: Document): Promise<void> {
   const resources = book.resources as unknown as {
     urls?: string[]
@@ -58,7 +78,6 @@ async function fixArchivedImages(book: ReturnType<typeof ePub>, doc: Document): 
   } | undefined
   const urls = resources?.urls
   const get = resources?.get?.bind(resources)
-  if (!urls || !get) return
 
   const basename = (p: string): string => p.split(/[?#]/)[0].split('/').pop() ?? p
 
@@ -71,22 +90,36 @@ async function fixArchivedImages(book: ReturnType<typeof ePub>, doc: Document): 
       const current = isSvg
         ? el.getAttributeNS(XLINK_NS, 'href') || el.getAttribute('href')
         : el.getAttribute('src')
-      if (!current || current.startsWith('blob:') || current.startsWith('data:')) continue
+      if (!current) continue
 
-      const wanted = basename(current)
-      const href = urls.find((u) => basename(u) === wanted)
-      if (!href) continue
-      const blobUrl = await get(href)
-      if (!blobUrl) continue
+      // Already resolved to an inline/blob URL — just guard against a failed load.
+      if (current.startsWith('blob:') || current.startsWith('data:')) {
+        if (!isSvg) el.addEventListener('error', () => replaceWithDivider(el), { once: true })
+        continue
+      }
 
-      if (isSvg) {
-        el.setAttribute('href', blobUrl)
-        el.setAttributeNS(XLINK_NS, 'xlink:href', blobUrl)
+      // Try to resolve against the archive manifest by filename.
+      let blobUrl: string | null = null
+      if (urls && get) {
+        const wanted = basename(current)
+        const href = urls.find((u) => basename(u) === wanted)
+        if (href) blobUrl = await get(href)
+      }
+
+      if (blobUrl) {
+        if (isSvg) {
+          el.setAttribute('href', blobUrl)
+          el.setAttributeNS(XLINK_NS, 'xlink:href', blobUrl)
+        } else {
+          el.setAttribute('src', blobUrl)
+          el.addEventListener('error', () => replaceWithDivider(el), { once: true })
+        }
       } else {
-        el.setAttribute('src', blobUrl)
+        // Couldn't resolve → show a divider instead of a broken-image icon.
+        replaceWithDivider(el)
       }
     } catch {
-      // One unresolvable image shouldn't break the rest of the page.
+      replaceWithDivider(el)
     }
   }
 }

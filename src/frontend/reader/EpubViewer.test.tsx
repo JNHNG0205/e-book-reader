@@ -155,6 +155,24 @@ test('resolves an archived <img> to its blob url on content render', async () =>
   })
 })
 
+test('replaces an unresolvable image with a divider (no broken-image icon)', async () => {
+  render(
+    <EpubViewer fileUrl="https://x/y.epub"
+      fontSize={100} theme="light" onRelocated={() => {}} onToc={() => {}} />,
+  )
+  await vi.waitFor(() => expect(contentHandlers.length).toBeGreaterThan(0))
+
+  // 99999.jpg is not in the manifest (urls), so it can't be resolved.
+  const doc = document.implementation.createHTMLDocument('section')
+  doc.body.innerHTML = '<p><img src="images/99999.jpg"></p>'
+  contentHandlers[0]({ document: doc })
+
+  await vi.waitFor(() => {
+    expect(doc.querySelector('img')).toBeNull()
+    expect(doc.querySelector('[data-broken-image]')).not.toBeNull()
+  })
+})
+
 test('leaves already-resolved (blob:) images untouched', async () => {
   render(
     <EpubViewer fileUrl="https://x/y.epub"
