@@ -63,25 +63,25 @@ export function HighlightPopover({
         </button>
       </div>
       {mode === 'edit' && (
-        <div className="mt-2 w-56">
+        <div className="mt-2 w-64">
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Add a note…"
             className="h-16 w-full rounded border p-1 text-sm"
           />
-          <div className="mt-1 flex items-center justify-between">
+          <div className="mt-1 flex items-center justify-between gap-2">
             <button
               type="button"
               onClick={() => onDelete?.()}
-              className="flex items-center gap-1 rounded border border-red-200 px-2 py-1 text-sm text-red-600 hover:bg-red-50"
+              className="whitespace-nowrap rounded border border-red-200 px-2 py-1 text-sm text-red-600 hover:bg-red-50"
             >
-              🗑 Remove highlight
+              Remove highlight
             </button>
             <button
               type="button"
               onClick={() => onSaveNote?.(draft)}
-              className="rounded bg-black px-2 py-1 text-sm text-white"
+              className="whitespace-nowrap rounded bg-black px-3 py-1 text-sm text-white"
             >
               Save note
             </button>
