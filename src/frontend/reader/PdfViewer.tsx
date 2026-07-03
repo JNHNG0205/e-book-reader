@@ -1,4 +1,8 @@
+import { useRef } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
+import 'react-pdf/dist/Page/TextLayer.css'
+import { colorValue } from './highlightColors'
+import { clientRectsToNormalized, type NormRect } from './pdfHighlightGeometry'
 
 // Configure the PDF.js worker (Vite resolves this URL at build time).
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -6,14 +10,41 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url,
 ).toString()
 
+export interface PdfViewerHighlight {
+  id: string
+  color: string
+  rects: NormRect[]
+}
+
 export interface PdfViewerProps {
   fileUrl: string
   pageNumber: number
   scale: number
   onNumPages: (n: number) => void
+  highlights?: PdfViewerHighlight[]
+  onSelect?: (sel: { rects: NormRect[]; text: string; x: number; y: number }) => void
+  onHighlightClick?: (id: string, x: number, y: number) => void
 }
 
-export function PdfViewer({ fileUrl, pageNumber, scale, onNumPages }: PdfViewerProps) {
+export function PdfViewer({
+  fileUrl, pageNumber, scale, onNumPages, highlights, onSelect, onHighlightClick,
+}: PdfViewerProps) {
+  const wrapperRef = useRef<HTMLDivElement>(null)
+
+  function handleMouseUp() {
+    if (!onSelect || !wrapperRef.current) return
+    const sel = window.getSelection()
+    if (!sel || sel.isCollapsed) return
+    const text = sel.toString().trim()
+    if (!text) return
+    const clientRects = Array.from(sel.getRangeAt(0).getClientRects())
+    if (clientRects.length === 0) return
+    const pageRect = wrapperRef.current.getBoundingClientRect()
+    const rects = clientRectsToNormalized(clientRects, pageRect)
+    const last = clientRects[clientRects.length - 1]
+    onSelect({ rects, text, x: last.left + last.width / 2, y: last.top })
+  }
+
   return (
     <Document
       file={fileUrl}
@@ -21,12 +52,34 @@ export function PdfViewer({ fileUrl, pageNumber, scale, onNumPages }: PdfViewerP
       loading={<div className="p-8 text-gray-500">Loading PDF…</div>}
       error={<div className="p-8 text-red-600">Failed to load PDF.</div>}
     >
-      <Page
-        pageNumber={pageNumber}
-        scale={scale}
-        renderTextLayer={false}
-        renderAnnotationLayer={false}
-      />
+      <div
+        ref={wrapperRef}
+        data-pdf-page-wrapper
+        className="relative inline-block"
+        onMouseUp={handleMouseUp}
+      >
+        <Page pageNumber={pageNumber} scale={scale} renderAnnotationLayer={false} />
+        {highlights?.flatMap((h) =>
+          h.rects.map((r, i) => (
+            <div
+              key={`${h.id}-${i}`}
+              data-highlight-id={h.id}
+              onClick={(e) => onHighlightClick?.(h.id, e.clientX, e.clientY)}
+              style={{
+                position: 'absolute',
+                left: `${r.x * 100}%`,
+                top: `${r.y * 100}%`,
+                width: `${r.w * 100}%`,
+                height: `${r.h * 100}%`,
+                backgroundColor: colorValue(h.color),
+                opacity: 0.35,
+                mixBlendMode: 'multiply',
+                cursor: 'pointer',
+              }}
+            />
+          )),
+        )}
+      </div>
     </Document>
   )
 }
