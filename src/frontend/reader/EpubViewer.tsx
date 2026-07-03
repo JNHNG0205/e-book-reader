@@ -1,5 +1,5 @@
 import {
-  forwardRef, useEffect, useImperativeHandle, useRef,
+  forwardRef, useEffect, useImperativeHandle, useRef, useState,
 } from 'react'
 import ePub, { type Rendition } from 'epubjs'
 import { flattenToc, type TocItem } from './epubToc'
@@ -35,6 +35,7 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
   const renditionRef = useRef<Rendition | null>(null)
   const onRelocatedRef = useRef(onRelocated)
   const onTocRef = useRef(onToc)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => { onRelocatedRef.current = onRelocated }, [onRelocated])
   useEffect(() => { onTocRef.current = onToc }, [onToc])
@@ -47,23 +48,41 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
 
   // Create the book + rendition once per file.
   useEffect(() => {
-    if (!containerRef.current) return
-    const book = ePub(fileUrl)
-    const rendition = book.renderTo(containerRef.current, {
-      width: '100%', height: '100%', flow: 'paginated', spread: 'none',
-    })
-    renditionRef.current = rendition
-    for (const [name, styles] of Object.entries(THEME_STYLES)) {
-      rendition.themes.register(name, styles)
-    }
-    rendition.themes.select(theme)
-    rendition.themes.fontSize(`${fontSize}%`)
-    void rendition.display(initialCfi ?? undefined)
-    rendition.on('relocated', (loc: { start: { cfi: string } }) => onRelocatedRef.current(loc.start.cfi))
-    void book.loaded.navigation
-      .then((nav: { toc: Parameters<typeof flattenToc>[0] }) => { onTocRef.current(flattenToc(nav.toc)) })
-      .catch(() => { /* navigation failed to load; leave toc empty */ })
-    return () => { book.destroy() }
+    let cancelled = false
+    let book: ReturnType<typeof ePub> | null = null
+    setError(null)
+
+    void (async () => {
+      try {
+        const res = await fetch(fileUrl)
+        if (!res.ok) {
+          setError('Failed to load this book.')
+          return
+        }
+        const buffer = await res.arrayBuffer()
+        if (cancelled || !containerRef.current) return
+
+        book = ePub(buffer)
+        const rendition = book.renderTo(containerRef.current, {
+          width: '100%', height: '100%', flow: 'paginated', spread: 'none',
+        })
+        renditionRef.current = rendition
+        for (const [name, styles] of Object.entries(THEME_STYLES)) {
+          rendition.themes.register(name, styles)
+        }
+        rendition.themes.select(theme)
+        rendition.themes.fontSize(`${fontSize}%`)
+        void rendition.display(initialCfi ?? undefined)
+        rendition.on('relocated', (loc: { start: { cfi: string } }) => onRelocatedRef.current(loc.start.cfi))
+        void book.loaded.navigation
+          .then((nav: { toc: Parameters<typeof flattenToc>[0] }) => { onTocRef.current(flattenToc(nav.toc)) })
+          .catch(() => { /* navigation failed to load; leave toc empty */ })
+      } catch {
+        setError('Failed to load this book.')
+      }
+    })()
+
+    return () => { cancelled = true; book?.destroy() }
     // Intentionally only re-create when the file changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fileUrl])
@@ -72,6 +91,10 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
   useEffect(() => { renditionRef.current?.themes.fontSize(`${fontSize}%`) }, [fontSize])
   // Apply theme when it changes.
   useEffect(() => { renditionRef.current?.themes.select(theme) }, [theme])
+
+  if (error) {
+    return <div className="p-8 text-red-600" role="alert">{error}</div>
+  }
 
   return <div ref={containerRef} className="h-full w-full" data-testid="epub-container" />
 })
