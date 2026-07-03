@@ -76,6 +76,27 @@ test('toggling contents shows the toc panel with items from the viewer', async (
   expect(screen.getByRole('button', { name: 'Ch 1' })).toBeInTheDocument()
 })
 
+test('clicking a toc item navigates but keeps the panel open', async () => {
+  await act(async () => { render(<EpubReader bookId="b1" fileUrl="https://x/y.epub" onBack={vi.fn()} />) })
+  act(() => {
+    (viewerProps.current?.onToc as (t: unknown) => void)([{ label: 'Ch 1', href: 'c1.xhtml', level: 0 }])
+  })
+  await userEvent.click(screen.getByRole('button', { name: /toggle contents/i }))
+  await userEvent.click(screen.getByRole('button', { name: 'Ch 1' }))
+  expect(goTo).toHaveBeenCalledWith('c1.xhtml')
+  expect(screen.getByRole('button', { name: 'Ch 1' })).toBeInTheDocument()
+})
+
+test('the toc close button closes the panel', async () => {
+  await act(async () => { render(<EpubReader bookId="b1" fileUrl="https://x/y.epub" onBack={vi.fn()} />) })
+  act(() => {
+    (viewerProps.current?.onToc as (t: unknown) => void)([{ label: 'Ch 1', href: 'c1.xhtml', level: 0 }])
+  })
+  await userEvent.click(screen.getByRole('button', { name: /toggle contents/i }))
+  await userEvent.click(screen.getByRole('button', { name: 'Close contents' }))
+  expect(screen.queryByRole('button', { name: 'Ch 1' })).not.toBeInTheDocument()
+})
+
 test('Back button calls the provided onBack', async () => {
   const onBack = vi.fn()
   await act(async () => { render(<EpubReader bookId="b1" fileUrl="https://x/y.epub" onBack={onBack} />) })

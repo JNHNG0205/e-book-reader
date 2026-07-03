@@ -25,3 +25,18 @@ test('shows an empty note when there are no items', () => {
   render(<TocPanel items={[]} onNavigate={() => {}} />)
   expect(screen.getByText(/no contents/i)).toBeInTheDocument()
 })
+
+test('highlights the item matching activeHref', () => {
+  render(<TocPanel items={items} onNavigate={() => {}} activeHref="c1.xhtml#s1" />)
+  const active = screen.getByRole('button', { name: 'Section 1.1' })
+  const inactive = screen.getByRole('button', { name: 'Chapter 1' })
+  expect(active.className).toMatch(/bg-blue-100/)
+  expect(inactive.className).not.toMatch(/bg-blue-100/)
+})
+
+test('close button calls onClose', async () => {
+  const onClose = vi.fn()
+  render(<TocPanel items={items} onNavigate={() => {}} onClose={onClose} />)
+  await userEvent.click(screen.getByRole('button', { name: 'Close contents' }))
+  expect(onClose).toHaveBeenCalled()
+})

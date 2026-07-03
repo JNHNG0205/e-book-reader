@@ -4,10 +4,15 @@ import { expect, test, vi } from 'vitest'
 import { EpubToolbar } from './EpubToolbar'
 
 const props = {
-  fontSize: 100, theme: 'light' as const,
+  fontSize: 100, theme: 'light' as const, current: 0, total: 0,
   onPrev: vi.fn(), onNext: vi.fn(), onFontSmaller: vi.fn(), onFontLarger: vi.fn(),
   onCycleTheme: vi.fn(), onToggleToc: vi.fn(), onBack: vi.fn(),
 }
+
+test('shows the progress indicator when total is known', () => {
+  render(<EpubToolbar {...props} current={12} total={340} />)
+  expect(screen.getByText('12 / 340')).toBeInTheDocument()
+})
 
 test('shows the current font size', () => {
   render(<EpubToolbar {...props} fontSize={120} />)

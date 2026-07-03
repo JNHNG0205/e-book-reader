@@ -16,11 +16,18 @@ const { rendition, book: _book, ePub, relocatedHandlers } = vi.hoisted(() => {
     }),
     themes: { fontSize: vi.fn(), register: vi.fn(), select: vi.fn() },
     destroy: vi.fn(),
+    currentLocation: vi.fn(() => ({ start: { cfi: 'epubcfi(x)' } })),
   }
   const book = {
     renderTo: vi.fn(() => rendition),
     loaded: { navigation: Promise.resolve({ toc: [{ label: 'Ch 1', href: 'c1.xhtml', subitems: [] }] }) },
     destroy: vi.fn(),
+    ready: Promise.resolve(undefined),
+    locations: {
+      generate: vi.fn().mockResolvedValue([]),
+      length: vi.fn(() => 100),
+      locationFromCfi: vi.fn(() => 11),
+    },
   }
   const ePub = vi.fn(() => book)
   return { rendition, book, ePub, relocatedHandlers }
@@ -102,6 +109,17 @@ test('reports the flattened toc once navigation loads', async () => {
   )
   await vi.waitFor(() => {
     expect(onToc).toHaveBeenCalledWith([{ label: 'Ch 1', href: 'c1.xhtml', level: 0 }])
+  })
+})
+
+test('reports progress once locations generate', async () => {
+  const onProgress = vi.fn()
+  render(
+    <EpubViewer fileUrl="https://x/y.epub"
+      fontSize={100} theme="light" onRelocated={() => {}} onToc={() => {}} onProgress={onProgress} />,
+  )
+  await vi.waitFor(() => {
+    expect(onProgress).toHaveBeenCalledWith({ current: 12, total: 100 })
   })
 })
 

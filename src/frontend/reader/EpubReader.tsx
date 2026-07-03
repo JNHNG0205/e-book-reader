@@ -25,8 +25,10 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
   const [theme, setTheme] = useState<EpubTheme>(initial.theme)
   const [toc, setToc] = useState<TocItem[]>([])
   const [tocOpen, setTocOpen] = useState(false)
+  const [activeHref, setActiveHref] = useState<string | null>(null)
   const [initialCfi, setInitialCfi] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
+  const [progress, setProgress] = useState<{ current: number; total: number } | null>(null)
 
   // Load the saved position before mounting the viewer, so it resumes correctly.
   useEffect(() => {
@@ -59,6 +61,7 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
     <div className="flex h-full w-full flex-col">
       <EpubToolbar
         fontSize={fontSize} theme={theme}
+        current={progress?.current ?? 0} total={progress?.total ?? 0}
         onPrev={() => viewerRef.current?.prev()}
         onNext={() => viewerRef.current?.next()}
         onFontSmaller={smaller} onFontLarger={larger}
@@ -70,7 +73,9 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
         {tocOpen && (
           <TocPanel
             items={toc}
-            onNavigate={(href) => { viewerRef.current?.goTo(href); setTocOpen(false) }}
+            activeHref={activeHref}
+            onNavigate={(href) => { viewerRef.current?.goTo(href); setActiveHref(href) }}
+            onClose={() => setTocOpen(false)}
           />
         )}
         {/* Constrain the reading column to a book-like width so lines don't stretch
@@ -84,6 +89,7 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
             theme={theme}
             onRelocated={onRelocated}
             onToc={setToc}
+            onProgress={setProgress}
           />
         </div>
       </div>
