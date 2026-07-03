@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
 
 // vi.mock is hoisted; create mock fns via vi.hoisted() so the factory can use them.
@@ -21,14 +22,14 @@ beforeEach(() => {
 })
 
 test('renders books from the repository', async () => {
-  render(<LibraryPage />)
+  render(<MemoryRouter><LibraryPage /></MemoryRouter>)
   expect(await screen.findByText('Dune')).toBeInTheDocument()
   expect(screen.getByText('Herbert')).toBeInTheDocument()
 })
 
 test('uploads a selected pdf file with format inferred from extension', async () => {
   uploadBook.mockResolvedValue({ id: 'b2', title: 'book', author: null, format: 'pdf' })
-  render(<LibraryPage />)
+  render(<MemoryRouter><LibraryPage /></MemoryRouter>)
   await screen.findByText('Dune')
   const file = new File(['%PDF'], 'My Book.pdf', { type: 'application/pdf' })
   const input = screen.getByLabelText(/add book/i)
@@ -39,4 +40,17 @@ test('uploads a selected pdf file with format inferred from extension', async ()
       expect.objectContaining({ title: 'My Book', format: 'pdf' }),
     ),
   )
+})
+
+test('clicking a book navigates to its reader route', async () => {
+  render(
+    <MemoryRouter initialEntries={['/']}>
+      <Routes>
+        <Route path="/" element={<LibraryPage />} />
+        <Route path="/read/:bookId" element={<div>reader for book</div>} />
+      </Routes>
+    </MemoryRouter>,
+  )
+  await userEvent.click(await screen.findByRole('button', { name: 'Dune' }))
+  expect(await screen.findByText('reader for book')).toBeInTheDocument()
 })

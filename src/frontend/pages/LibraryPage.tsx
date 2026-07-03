@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { Book, BookFormat } from '@shared/types'
 import { listBooks, uploadBook, renameBook, deleteBook } from '@backend/data/books'
 import { BookCard } from '@frontend/components/BookCard'
 import { UploadButton } from '@frontend/components/UploadButton'
 
 export function LibraryPage() {
+  const navigate = useNavigate()
   const [books, setBooks] = useState<Book[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -61,7 +63,7 @@ export function LibraryPage() {
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {books.map((b) => (
-            <BookCard key={b.id} book={b} onRename={handleRename} onDelete={handleDelete} />
+            <BookCard key={b.id} book={b} onOpen={(id) => navigate('/read/' + id)} onRename={handleRename} onDelete={handleDelete} />
           ))}
         </div>
       )}

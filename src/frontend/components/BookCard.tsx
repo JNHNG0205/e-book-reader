@@ -1,18 +1,25 @@
 import type { Book } from '@shared/types'
 
 export function BookCard({
-  book, onRename, onDelete,
+  book, onOpen, onRename, onDelete,
 }: {
   book: Book
+  onOpen: (id: string) => void
   onRename: (id: string, title: string) => void
   onDelete: (id: string) => void
 }) {
   return (
     <div className="flex flex-col rounded border p-3">
-      <div className="mb-2 flex aspect-[3/4] items-center justify-center rounded bg-gray-100 text-gray-400">
+      <button
+        type="button"
+        onClick={() => onOpen(book.id)}
+        className="mb-2 flex aspect-[3/4] items-center justify-center rounded bg-gray-100 text-gray-400 hover:bg-gray-200"
+      >
         {book.format.toUpperCase()}
-      </div>
-      <div className="font-medium">{book.title}</div>
+      </button>
+      <button type="button" onClick={() => onOpen(book.id)} className="text-left font-medium hover:underline">
+        {book.title}
+      </button>
       {book.author && <div className="text-sm text-gray-500">{book.author}</div>}
       <div className="mt-2 flex gap-3 text-sm">
         <button
