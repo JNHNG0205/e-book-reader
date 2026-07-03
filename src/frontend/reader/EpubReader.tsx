@@ -32,7 +32,7 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
   const [activeHref, setActiveHref] = useState<string | null>(null)
   const [initialCfi, setInitialCfi] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
-  const [progress, setProgress] = useState<{ percent: number } | null>(null)
+  const [progress, setProgress] = useState<{ current: number; total: number } | null>(null)
   const [currentCfi, setCurrentCfi] = useState<string | null>(null)
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
 
@@ -66,7 +66,7 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
     // (e.g. tapping the bookmark button immediately after opening).
     const location = currentCfi ?? initialCfi
     if (!location) return
-    const label = progress ? `${progress.percent}%` : 'Bookmark'
+    const label = progress ? `Page ${progress.current}` : 'Bookmark'
     const bm = await saveBookmark(bookId, { location, label })
     setBookmarks((prev) => [...prev, bm])
   }
@@ -85,7 +85,7 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
     <div className="flex h-full w-full flex-col">
       <EpubToolbar
         fontSize={fontSize} theme={theme}
-        percent={progress?.percent ?? null}
+        current={progress?.current ?? 0} total={progress?.total ?? 0}
         onPrev={() => viewerRef.current?.prev()}
         onNext={() => viewerRef.current?.next()}
         onFontSmaller={smaller} onFontLarger={larger}

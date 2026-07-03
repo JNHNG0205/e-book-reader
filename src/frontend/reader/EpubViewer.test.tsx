@@ -134,7 +134,7 @@ test('reports progress once locations generate', async () => {
       fontSize={100} theme="light" onRelocated={() => {}} onToc={() => {}} onProgress={onProgress} />,
   )
   await vi.waitFor(() => {
-    expect(onProgress).toHaveBeenCalledWith({ percent: 42 })
+    expect(onProgress).toHaveBeenCalledWith({ current: 12, total: 100 })
   })
 })
 
@@ -206,15 +206,15 @@ test('generates and caches locations on first open (no cache)', async () => {
     <EpubViewer fileUrl="https://x/y.epub" bookId="b1"
       fontSize={100} theme="light" onRelocated={() => {}} onToc={() => {}} />,
   )
-  await vi.waitFor(() => expect(_book.locations.generate).toHaveBeenCalledWith(1000))
+  await vi.waitFor(() => expect(_book.locations.generate).toHaveBeenCalledWith(3000))
   await vi.waitFor(() => {
-    expect(localStorage.getItem('epub.locations.b1')).toBe('["loc1","loc2"]')
+    expect(localStorage.getItem('epub.locations.3000.b1')).toBe('["loc1","loc2"]')
   })
   expect(_book.locations.load).not.toHaveBeenCalled()
 })
 
 test('loads cached locations instantly on re-open (skips generate)', async () => {
-  localStorage.setItem('epub.locations.b1', '["cached"]')
+  localStorage.setItem('epub.locations.3000.b1', '["cached"]')
   render(
     <EpubViewer fileUrl="https://x/y.epub" bookId="b1"
       fontSize={100} theme="light" onRelocated={() => {}} onToc={() => {}} />,

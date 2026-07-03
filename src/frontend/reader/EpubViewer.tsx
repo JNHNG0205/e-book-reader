@@ -20,14 +20,20 @@ export interface EpubViewerProps {
   theme: EpubTheme
   onRelocated: (cfi: string) => void
   onToc: (toc: TocItem[]) => void
-  onProgress?: (p: { percent: number }) => void
+  onProgress?: (p: { current: number; total: number }) => void
 }
 
 // Generating epub.js "locations" (the index behind the "X / Y" progress count) is slow
 // on first open — a few seconds for a full book. We persist the generated index per book
 // so every later open loads it instantly instead of recomputing.
+// Size each epub.js "location" to roughly one on-screen page of text, so page numbers
+// advance by ~1 per turn. (Reflowable text has no true fixed pages, so the count is
+// approximate and shifts a little with font size.)
+const LOCATION_CHARS = 3000
+
 function locationsCacheKey(bookId: string): string {
-  return `epub.locations.${bookId}`
+  // Include the granularity so changing LOCATION_CHARS invalidates stale caches.
+  return `epub.locations.${LOCATION_CHARS}.${bookId}`
 }
 function readLocationsCache(bookId: string): string | null {
   try { return localStorage.getItem(locationsCacheKey(bookId)) } catch { return null }
@@ -140,18 +146,19 @@ async function fixArchivedImages(book: ReturnType<typeof ePub>, doc: Document): 
 // epub.js's published types claim `locationFromCfi` returns a `Location` object, but at
 // runtime it returns a 0-based location index (number). We report it as a 1-based
 // "page" number so it reads naturally as "current / total".
-// EPUB has no fixed pages; the location index jumps by a variable amount per screen,
-// so we report a smooth reading percentage (0–100) instead — like a real e-reader.
+// With screen-sized locations (LOCATION_CHARS), the location index reads as a page
+// number: current = index + 1, total = number of locations.
 function reportProgressForCfi(
   book: ReturnType<typeof ePub>,
   cfi: string,
-  onProgressRef: { current?: (p: { percent: number }) => void },
+  onProgressRef: { current?: (p: { current: number; total: number }) => void },
 ) {
   if (!onProgressRef.current) return
-  if (!book.locations.length()) return
-  const fraction = book.locations.percentageFromCfi(cfi) as unknown as number
-  if (typeof fraction !== 'number' || Number.isNaN(fraction)) return
-  onProgressRef.current({ percent: Math.round(fraction * 100) })
+  const total = book.locations.length()
+  if (!total) return
+  const index = book.locations.locationFromCfi(cfi) as unknown as number
+  if (typeof index !== 'number' || Number.isNaN(index)) return
+  onProgressRef.current({ current: index + 1, total })
 }
 
 export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function EpubViewer(
@@ -227,7 +234,7 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
           if (cached) {
             locations.load(cached) // instant on re-open
           } else {
-            await locations.generate(1000)
+            await locations.generate(LOCATION_CHARS)
             if (bookId) writeLocationsCache(bookId, locations.save())
           }
           if (cancelled) return
