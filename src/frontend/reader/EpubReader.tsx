@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { getProgress, saveProgress } from '@backend/data/progress'
+import { listBookmarks, saveBookmark, deleteBookmark } from '@backend/data/bookmarks'
 import { EpubViewer, type EpubViewerHandle, type EpubTheme } from './EpubViewer'
 import { EpubToolbar } from './EpubToolbar'
 import { TocPanel } from './TocPanel'
+import { ReaderSidebar } from './ReaderSidebar'
+import { BookmarksPanel } from './BookmarksPanel'
 import type { TocItem } from './epubToc'
+import type { Bookmark } from '@shared/types'
 import { loadReaderSettings, saveReaderSettings } from './readerSettings'
 
 const THEMES: EpubTheme[] = ['light', 'dark', 'sepia']
@@ -29,6 +33,8 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
   const [initialCfi, setInitialCfi] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null)
+  const [currentCfi, setCurrentCfi] = useState<string | null>(null)
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
 
   // Load the saved position before mounting the viewer, so it resumes correctly.
   useEffect(() => {
@@ -44,12 +50,27 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
   // Persist settings whenever they change.
   useEffect(() => { saveReaderSettings({ fontSize, theme }) }, [fontSize, theme])
 
+  // Load bookmarks on mount.
+  useEffect(() => { listBookmarks(bookId).then(setBookmarks).catch(() => {}) }, [bookId])
+
   function onRelocated(cfi: string) {
+    setCurrentCfi(cfi)
     if (saveTimer.current) clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => { void saveProgress(bookId, cfi) }, 500)
   }
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => () => { if (saveTimer.current) clearTimeout(saveTimer.current) }, [])
+
+  async function addBookmark() {
+    if (!currentCfi) return
+    const label = progress ? `Location ${progress.current}` : 'Bookmark'
+    const bm = await saveBookmark(bookId, { location: currentCfi, label })
+    setBookmarks((prev) => [...prev, bm])
+  }
+  async function removeBookmark(id: string) {
+    await deleteBookmark(id)
+    setBookmarks((prev) => prev.filter((b) => b.id !== id))
+  }
 
   const smaller = () => setFontSize((f) => Math.max(MIN_FONT, f - 10))
   const larger = () => setFontSize((f) => Math.min(MAX_FONT, f + 10))
@@ -68,13 +89,28 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
         onCycleTheme={cycleTheme}
         onToggleToc={() => setTocOpen((v) => !v)}
         onBack={onBack}
+        onAddBookmark={() => { void addBookmark() }}
       />
       <div className={`flex min-h-0 flex-1 justify-center ${AREA_BG[theme]}`}>
         {tocOpen && (
-          <TocPanel
-            items={toc}
-            activeHref={activeHref}
-            onNavigate={(href) => { viewerRef.current?.goTo(href); setActiveHref(href) }}
+          <ReaderSidebar
+            onClose={() => setTocOpen(false)}
+            tabs={[
+              { key: 'contents', label: 'Contents', render: () => (
+                <TocPanel
+                  items={toc}
+                  activeHref={activeHref}
+                  onNavigate={(href) => { viewerRef.current?.goTo(href); setActiveHref(href) }}
+                />
+              ) },
+              { key: 'bookmarks', label: 'Bookmarks', render: () => (
+                <BookmarksPanel
+                  bookmarks={bookmarks}
+                  onJump={(loc) => viewerRef.current?.goTo(loc)}
+                  onDelete={removeBookmark}
+                />
+              ) },
+            ]}
           />
         )}
         {/* Constrain the reading column to a book-like width so lines don't stretch

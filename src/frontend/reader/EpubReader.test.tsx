@@ -1,4 +1,4 @@
-import { render, screen, act } from '@testing-library/react'
+import { render, screen, act, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, test, vi } from 'vitest'
 
@@ -21,6 +21,10 @@ const { getProgress, saveProgress } = vi.hoisted(() => ({
   getProgress: vi.fn(), saveProgress: vi.fn(),
 }))
 vi.mock('@backend/data/progress', () => ({ getProgress, saveProgress }))
+const { listBookmarks, saveBookmark, deleteBookmark } = vi.hoisted(() => ({
+  listBookmarks: vi.fn(), saveBookmark: vi.fn(), deleteBookmark: vi.fn(),
+}))
+vi.mock('@backend/data/bookmarks', () => ({ listBookmarks, saveBookmark, deleteBookmark }))
 
 import { EpubReader } from './EpubReader'
 
@@ -29,6 +33,9 @@ beforeEach(() => {
   localStorage.clear()
   getProgress.mockResolvedValue(null)
   saveProgress.mockResolvedValue(undefined)
+  listBookmarks.mockResolvedValue([])
+  saveBookmark.mockResolvedValue({ id: 'bm1' })
+  deleteBookmark.mockResolvedValue(undefined)
 })
 
 test('renders the viewer and passes the file url + resumed cfi', async () => {
@@ -102,4 +109,23 @@ test('Back button calls the provided onBack', async () => {
   await act(async () => { render(<EpubReader bookId="b1" fileUrl="https://x/y.epub" onBack={onBack} />) })
   await userEvent.click(screen.getByRole('button', { name: /library/i }))
   expect(onBack).toHaveBeenCalled()
+})
+
+test('adds a bookmark at the current cfi', async () => {
+  await act(async () => { render(<EpubReader bookId="b1" fileUrl="https://x/y.epub" onBack={() => {}} />) })
+  // simulate a relocation so there is a current cfi
+  act(() => { (viewerProps.current?.onRelocated as (c: string) => void)('epubcfi(/6/14!/2)') })
+  await userEvent.click(screen.getByRole('button', { name: /add bookmark/i }))
+  await waitFor(() => expect(saveBookmark).toHaveBeenCalledWith('b1', expect.objectContaining({ location: 'epubcfi(/6/14!/2)' })))
+})
+
+test('shows bookmarks in the sidebar and jumps via goTo', async () => {
+  listBookmarks.mockResolvedValue([
+    { id: 'bm1', user_id: 'u1', book_id: 'b1', location: 'epubcfi(/6/20!/4)', label: 'Loc 42', created_at: '', updated_at: '' },
+  ])
+  await act(async () => { render(<EpubReader bookId="b1" fileUrl="https://x/y.epub" onBack={() => {}} />) })
+  await userEvent.click(screen.getByRole('button', { name: /toggle contents/i }))
+  await userEvent.click(await screen.findByRole('button', { name: 'Bookmarks' }))
+  await userEvent.click(await screen.findByRole('button', { name: 'Loc 42' }))
+  expect(goTo).toHaveBeenCalledWith('epubcfi(/6/20!/4)')
 })
