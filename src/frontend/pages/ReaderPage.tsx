@@ -109,30 +109,36 @@ export function ReaderPage() {
     .filter((h) => (h.anchor as { page?: number }).page === page)
     .map((h) => ({ id: h.id, color: h.color, rects: ((h.anchor as { rects?: NormRect[] }).rects) ?? [] }))
 
+  // Close the popover and clear the browser's lingering text selection (the PDF page +
+  // overlays live in the host document, so a plain removeAllRanges works — no iframe).
+  function closePopover() {
+    window.getSelection()?.removeAllRanges()
+    setPopover(null)
+  }
   async function createHighlight(color: string) {
     if (!popover?.rects) return
     const saved = await saveHighlight(book!.id, {
       color, anchor: { page, rects: popover.rects, text: popover.text ?? '' },
     })
     setHighlights((prev) => [...prev, saved])
-    setPopover(null)
+    closePopover()
   }
   async function changeColor(color: string) {
     if (!popover?.id) return
     await updateHighlight(popover.id, { color })
     setHighlights((prev) => prev.map((h) => (h.id === popover.id ? { ...h, color } : h)))
-    setPopover(null)
+    closePopover()
   }
   async function saveNote(note: string) {
     if (!popover?.id) return
     await updateHighlight(popover.id, { note })
     setHighlights((prev) => prev.map((h) => (h.id === popover.id ? { ...h, note } : h)))
-    setPopover(null)
+    closePopover()
   }
   async function removeHighlight(id: string) {
     await deleteHighlight(id)
     setHighlights((prev) => prev.filter((h) => h.id !== id))
-    setPopover(null)
+    closePopover()
   }
 
   if (error) return <div className="p-6 text-red-600" role="alert">{error}</div>
@@ -188,7 +194,7 @@ export function ReaderPage() {
                   onPickColor={(c) => { void (popover.mode === 'create' ? createHighlight(c) : changeColor(c)) }}
                   onSaveNote={(n) => { void saveNote(n) }}
                   onDelete={() => { if (popover.id) void removeHighlight(popover.id) }}
-                  onClose={() => setPopover(null)}
+                  onClose={closePopover}
                 />
               )}
             </div>
