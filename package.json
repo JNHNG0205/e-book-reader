@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.0",
+    "epubjs": "^0.3.93",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-pdf": "^10.4.1",
