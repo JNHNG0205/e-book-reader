@@ -18,6 +18,11 @@ vi.mock('@frontend/reader/PdfViewer', () => ({
     return <div data-testid="pdf-page">page {pageNumber}</div>
   },
 }))
+vi.mock('@frontend/reader/EpubReader', () => ({
+  EpubReader: ({ bookId, fileUrl }: { bookId: string; fileUrl: string }) => (
+    <div data-testid="epub-reader">{bookId}:{fileUrl}</div>
+  ),
+}))
 
 import { ReaderPage } from './ReaderPage'
 
@@ -52,10 +57,12 @@ test('next page advances the rendered page', async () => {
   expect(screen.getByTestId('pdf-page')).toHaveTextContent('page 2')
 })
 
-test('shows a placeholder for EPUB (not supported this milestone)', async () => {
+test('renders the EpubReader for an EPUB with its file url', async () => {
   getBook.mockResolvedValue({ id: 'b2', title: 'Novel', format: 'epub', storage_path: 'u1/b2.epub' })
+  getBookFileUrl.mockResolvedValue('https://signed/b2.epub')
   renderAt('b2')
-  expect(await screen.findByText(/not.*supported/i)).toBeInTheDocument()
+  const reader = await screen.findByTestId('epub-reader')
+  expect(reader).toHaveTextContent('b2:https://signed/b2.epub')
 })
 
 test('resumes to the saved page', async () => {

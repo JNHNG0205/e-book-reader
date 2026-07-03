@@ -5,6 +5,7 @@ import { getBook, getBookFileUrl } from '@backend/data/books'
 import { getProgress, saveProgress } from '@backend/data/progress'
 import { PdfViewer } from '@frontend/reader/PdfViewer'
 import { ReaderToolbar } from '@frontend/reader/ReaderToolbar'
+import { EpubReader } from '@frontend/reader/EpubReader'
 
 const MIN_SCALE = 0.5
 const MAX_SCALE = 3
@@ -27,7 +28,7 @@ export function ReaderPage() {
         const b = await getBook(bookId)
         if (!active) return
         setBook(b)
-        if (b.format === 'pdf') setFileUrl(await getBookFileUrl(b.storage_path))
+        setFileUrl(await getBookFileUrl(b.storage_path))
         const saved = await getProgress(bookId)
         if (active && saved) setPage(Math.max(1, parseInt(saved, 10) || 1))
       } catch (e) {
@@ -60,19 +61,19 @@ export function ReaderPage() {
 
   return (
     <div className="flex h-[calc(100vh-49px)] flex-col">
-      <ReaderToolbar
-        page={page} numPages={numPages} scale={scale}
-        onPrev={prev} onNext={next} onZoomIn={zoomIn} onZoomOut={zoomOut} onBack={goBack}
-      />
+      {book.format === 'pdf' && (
+        <ReaderToolbar
+          page={page} numPages={numPages} scale={scale}
+          onPrev={prev} onNext={next} onZoomIn={zoomIn} onZoomOut={zoomOut} onBack={goBack}
+        />
+      )}
       <div className="flex flex-1 justify-center overflow-auto bg-gray-100 p-4">
         {book.format === 'pdf' && fileUrl ? (
           <PdfViewer fileUrl={fileUrl} pageNumber={page} scale={scale} onNumPages={setNumPages} />
-        ) : book.format === 'pdf' ? (
-          <div className="p-8 text-gray-500">Loading PDF…</div>
+        ) : book.format === 'epub' && fileUrl ? (
+          <EpubReader bookId={book.id} fileUrl={fileUrl} />
         ) : (
-          <div className="p-8 text-gray-500">
-            This format is not supported yet — EPUB reading arrives in a later update.
-          </div>
+          <div className="p-8 text-gray-500">Loading…</div>
         )}
       </div>
     </div>
