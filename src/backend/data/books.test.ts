@@ -10,7 +10,16 @@ vi.mock('@backend/supabase', () => ({
   supabase: { auth: { getUser }, from, storage: { from: storageFrom } },
 }))
 
-import { listBooks, uploadBook, renameBook, deleteBook, getBook, getBookFileUrl } from './books'
+import {
+  listBooks,
+  uploadBook,
+  renameBook,
+  deleteBook,
+  getBook,
+  getBookFileUrl,
+  getCoverUrl,
+  saveCover,
+} from './books'
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -65,6 +74,31 @@ test('getBookFileUrl returns a signed url for the storage path', async () => {
   const url = await getBookFileUrl('u1/x.pdf')
   expect(url).toBe('https://signed/x.pdf')
   expect(createSignedUrl).toHaveBeenCalledWith('u1/x.pdf', 3600)
+})
+
+test('getCoverUrl returns a signed url for the cover path', async () => {
+  const createSignedUrl = vi.fn().mockResolvedValue({
+    data: { signedUrl: 'https://signed/cover.jpg' }, error: null,
+  })
+  storageFrom.mockReturnValue({ createSignedUrl })
+  const url = await getCoverUrl('u1/x-cover.jpg')
+  expect(url).toBe('https://signed/cover.jpg')
+  expect(createSignedUrl).toHaveBeenCalledWith('u1/x-cover.jpg', 3600)
+})
+
+test('saveCover uploads the cover under the user folder and updates cover_path', async () => {
+  const upload = vi.fn().mockResolvedValue({ data: { path: 'x' }, error: null })
+  storageFrom.mockReturnValue({ upload })
+  const eq = vi.fn().mockResolvedValue({ error: null })
+  from.mockReturnValue({ update: () => ({ eq }) })
+
+  const blob = new Blob(['x'], { type: 'image/jpeg' })
+  const coverPath = await saveCover('b1', blob)
+
+  expect(coverPath.startsWith('u1/')).toBe(true)
+  expect(coverPath.endsWith('-cover.jpg')).toBe(true)
+  expect(upload).toHaveBeenCalledWith(coverPath, blob, { contentType: 'image/jpeg' })
+  expect(eq).toHaveBeenCalledWith('id', 'b1')
 })
 
 test('deleteBook removes the storage object and deletes the row', async () => {

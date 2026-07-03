@@ -57,6 +57,27 @@ export async function getBookFileUrl(storagePath: string): Promise<string> {
   return data.signedUrl
 }
 
+export async function getCoverUrl(coverPath: string): Promise<string> {
+  const { data, error } = await supabase.storage.from('books').createSignedUrl(coverPath, 3600)
+  if (error) throw error
+  return data.signedUrl
+}
+
+export async function saveCover(bookId: string, blob: Blob): Promise<string> {
+  const userId = await requireUserId()
+  const coverPath = `${userId}/${crypto.randomUUID()}-cover.jpg`
+
+  const { error: upErr } = await supabase.storage
+    .from('books')
+    .upload(coverPath, blob, { contentType: blob.type || 'image/jpeg' })
+  if (upErr) throw upErr
+
+  const { error } = await supabase.from('books').update({ cover_path: coverPath }).eq('id', bookId)
+  if (error) throw error
+
+  return coverPath
+}
+
 export async function deleteBook(id: string): Promise<void> {
   const { data: book, error: readErr } = await supabase
     .from('books').select('storage_path').eq('id', id).single()
