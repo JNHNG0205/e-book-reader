@@ -70,6 +70,27 @@ test('clicking Rename opens the rename dialog and Save calls onRename', async ()
   expect(onRename).toHaveBeenCalledWith('b1', 'Dune (revised)')
 })
 
+test('renders an Offline badge when offlineAvailable is true', () => {
+  render(
+    <BookCard
+      book={book}
+      coverUrl={null}
+      offlineAvailable
+      onOpen={vi.fn()}
+      onRename={vi.fn()}
+      onDelete={vi.fn()}
+    />,
+  )
+  expect(screen.getByText('Offline')).toBeInTheDocument()
+})
+
+test('does not render an Offline badge when offlineAvailable is false or omitted', () => {
+  render(
+    <BookCard book={book} coverUrl={null} onOpen={vi.fn()} onRename={vi.fn()} onDelete={vi.fn()} />,
+  )
+  expect(screen.queryByText('Offline')).not.toBeInTheDocument()
+})
+
 test('clicking Delete opens the confirm dialog and Confirm calls onDelete', async () => {
   const onDelete = vi.fn()
   render(

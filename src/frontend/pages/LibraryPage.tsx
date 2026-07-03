@@ -7,29 +7,66 @@ import {
 } from '@backend/data/books'
 import { extractCoverBlob } from '@frontend/library/coverExtract'
 import { extractBookMetadata } from '@frontend/library/bookMetadata'
+import { cachedBookIds } from '@frontend/offline/bookCache'
 import { BookCard } from '@frontend/components/BookCard'
 import { UploadButton } from '@frontend/components/UploadButton'
+
+const LIBRARY_CACHE_KEY = 'library.books'
+
+function loadCachedBooks(): Book[] | null {
+  const raw = localStorage.getItem(LIBRARY_CACHE_KEY)
+  if (!raw) return null
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    return Array.isArray(parsed) ? (parsed as Book[]) : null
+  } catch {
+    return null
+  }
+}
 
 export function LibraryPage() {
   const navigate = useNavigate()
   const [books, setBooks] = useState<Book[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [offline, setOffline] = useState(false)
   const [covers, setCovers] = useState<Record<string, string>>({})
+  const [offlineIds, setOfflineIds] = useState<Set<string>>(new Set())
   const processedCoverIds = useRef(new Set<string>())
 
   const refresh = useCallback(async () => {
     try {
       setError(null)
-      setBooks(await listBooks())
+      const fetched = await listBooks()
+      setBooks(fetched)
+      setOffline(false)
+      try {
+        localStorage.setItem(LIBRARY_CACHE_KEY, JSON.stringify(fetched))
+      } catch {
+        // best-effort cache; ignore storage failures (e.g. quota, privacy mode)
+      }
     } catch (e) {
-      setError((e as Error).message)
+      const cached = loadCachedBooks()
+      if (cached) {
+        setBooks(cached)
+        setOffline(true)
+      } else {
+        setError((e as Error).message)
+      }
     } finally {
       setLoading(false)
     }
   }, [])
 
   useEffect(() => { void refresh() }, [refresh])
+
+  useEffect(() => {
+    void cachedBookIds()
+      .then((ids) => setOfflineIds(new Set(ids)))
+      .catch(() => {
+        // offline-cache lookup is best-effort; leave badges unset on failure
+      })
+  }, [books])
 
   useEffect(() => {
     const pending = books.filter((b) => !processedCoverIds.current.has(b.id))
@@ -109,6 +146,9 @@ export function LibraryPage() {
         <UploadButton onUpload={handleUpload} onReject={setError} />
       </div>
       {error && <p role="alert" className="text-red-600">{error}</p>}
+      {offline && (
+        <p className="mb-4 text-sm text-gray-500">Offline — showing your saved library</p>
+      )}
       {loading ? (
         <p>Loading…</p>
       ) : books.length === 0 ? (
@@ -120,6 +160,7 @@ export function LibraryPage() {
               key={b.id}
               book={b}
               coverUrl={covers[b.id] ?? null}
+              offlineAvailable={offlineIds.has(b.id)}
               onOpen={(id) => navigate('/read/' + id)}
               onRename={handleRename}
               onDelete={handleDelete}

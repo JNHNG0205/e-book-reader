@@ -73,3 +73,15 @@ export function SearchIcon(props: IconProps) {
     </Svg>
   )
 }
+
+// Download-with-check glyph for "available offline" badges.
+export function OfflineIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M12 3v10" />
+      <path d="M8 9l4 4 4-4" />
+      <path d="M4 17v2a2 2 0 0 0 2 2h5" />
+      <path d="M15 19l2 2 4-4" />
+    </Svg>
+  )
+}

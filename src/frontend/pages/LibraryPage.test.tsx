@@ -28,10 +28,15 @@ vi.mock('@frontend/library/coverExtract', () => ({ extractCoverBlob }))
 const { extractBookMetadata } = vi.hoisted(() => ({ extractBookMetadata: vi.fn() }))
 vi.mock('@frontend/library/bookMetadata', () => ({ extractBookMetadata }))
 
+const { cachedBookIds } = vi.hoisted(() => ({ cachedBookIds: vi.fn() }))
+vi.mock('@frontend/offline/bookCache', () => ({ cachedBookIds }))
+
 import { LibraryPage } from './LibraryPage'
 
 beforeEach(() => {
   vi.clearAllMocks()
+  localStorage.clear()
+  cachedBookIds.mockResolvedValue([])
   listBooks.mockResolvedValue([
     { id: 'b1', title: 'Dune', author: 'Herbert', format: 'pdf', cover_path: null, storage_path: 'books/b1.pdf' },
   ])
@@ -116,4 +121,58 @@ test('backfills a cover for a book without cover_path by extracting one from its
   expect(extractCoverBlob).toHaveBeenCalled()
   expect(getCoverUrl).toHaveBeenCalledWith('covers/b1.png')
   await waitFor(() => expect(container.querySelector('img')).toHaveAttribute('src', 'https://example.com/signed-cover.png'))
+})
+
+test('caches the book list in localStorage on a successful load', async () => {
+  render(<MemoryRouter><LibraryPage /></MemoryRouter>)
+  await screen.findByText('Dune')
+  await waitFor(() => {
+    const raw = localStorage.getItem('library.books')
+    expect(raw).not.toBeNull()
+    expect(JSON.parse(raw as string)).toEqual([
+      { id: 'b1', title: 'Dune', author: 'Herbert', format: 'pdf', cover_path: null, storage_path: 'books/b1.pdf' },
+    ])
+  })
+})
+
+test('falls back to the cached list and shows an offline note when listBooks rejects', async () => {
+  const cachedBooks = [
+    { id: 'b1', title: 'Dune', author: 'Herbert', format: 'pdf', cover_path: null, storage_path: 'books/b1.pdf' },
+  ]
+  localStorage.setItem('library.books', JSON.stringify(cachedBooks))
+  cachedBookIds.mockResolvedValue(['b1'])
+  listBooks.mockRejectedValue(new Error('network error'))
+
+  render(<MemoryRouter><LibraryPage /></MemoryRouter>)
+
+  expect(await screen.findByText('Dune')).toBeInTheDocument()
+  expect(screen.getByText('Offline — showing your saved library')).toBeInTheDocument()
+})
+
+test('marks books as offline-available based on cachedBookIds', async () => {
+  cachedBookIds.mockResolvedValue(['b1'])
+  render(<MemoryRouter><LibraryPage /></MemoryRouter>)
+  await screen.findByText('Dune')
+  await waitFor(() => expect(screen.getByText('Offline')).toBeInTheDocument())
+})
+
+test('does not mark a book offline-available when its id is not cached', async () => {
+  cachedBookIds.mockResolvedValue([])
+  render(<MemoryRouter><LibraryPage /></MemoryRouter>)
+  await screen.findByText('Dune')
+  expect(screen.queryByText('Offline')).not.toBeInTheDocument()
+})
+
+test('when listBooks rejects with no cached list, shows the error instead of a fallback', async () => {
+  listBooks.mockRejectedValue(new Error('network error'))
+  render(<MemoryRouter><LibraryPage /></MemoryRouter>)
+  expect(await screen.findByText('network error')).toBeInTheDocument()
+  expect(screen.queryByText('Dune')).not.toBeInTheDocument()
+})
+
+test('ignores a corrupt cached list value', async () => {
+  localStorage.setItem('library.books', 'not-json{')
+  listBooks.mockRejectedValue(new Error('network error'))
+  render(<MemoryRouter><LibraryPage /></MemoryRouter>)
+  expect(await screen.findByText('network error')).toBeInTheDocument()
 })

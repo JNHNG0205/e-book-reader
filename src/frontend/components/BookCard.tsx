@@ -2,12 +2,14 @@ import { useState } from 'react'
 import type { Book } from '@shared/types'
 import { RenameDialog } from '@frontend/components/RenameDialog'
 import { ConfirmDialog } from '@frontend/components/ConfirmDialog'
+import { OfflineIcon } from '@frontend/reader/icons'
 
 export function BookCard({
-  book, coverUrl, onOpen, onRename, onDelete,
+  book, coverUrl, offlineAvailable, onOpen, onRename, onDelete,
 }: {
   book: Book
   coverUrl?: string | null
+  offlineAvailable?: boolean
   onOpen: (id: string) => void
   onRename: (id: string, title: string) => void
   onDelete: (id: string) => void
@@ -19,12 +21,18 @@ export function BookCard({
       <button
         type="button"
         onClick={() => onOpen(book.id)}
-        className="mb-2 flex aspect-[3/4] items-center justify-center overflow-hidden rounded bg-gray-100 text-gray-400 hover:bg-gray-200"
+        className="relative mb-2 flex aspect-[3/4] items-center justify-center overflow-hidden rounded bg-gray-100 text-gray-400 hover:bg-gray-200"
       >
         {coverUrl ? (
           <img src={coverUrl} alt="" className="h-full w-full rounded object-cover" />
         ) : (
           book.format.toUpperCase()
+        )}
+        {offlineAvailable && (
+          <span className="absolute bottom-1 right-1 flex items-center gap-1 rounded bg-gray-900/80 px-1.5 py-0.5 text-xs font-medium text-white">
+            <OfflineIcon className="h-3 w-3" />
+            Offline
+          </span>
         )}
       </button>
       <button type="button" onClick={() => onOpen(book.id)} className="text-left font-medium hover:underline">
