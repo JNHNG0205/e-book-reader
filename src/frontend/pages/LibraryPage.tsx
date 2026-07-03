@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import type { Book, BookFormat } from '@shared/types'
 import {
   listBooks, uploadBook, renameBook, deleteBook, getCoverUrl, getBookFileUrl, saveCover,
+  updateBookMetadata,
 } from '@backend/data/books'
 import { extractCoverBlob } from '@frontend/library/coverExtract'
+import { extractBookMetadata } from '@frontend/library/bookMetadata'
 import { BookCard } from '@frontend/components/BookCard'
 import { UploadButton } from '@frontend/components/UploadButton'
 
@@ -40,6 +42,23 @@ export function LibraryPage() {
         if (!path) {
           const url = await getBookFileUrl(b.storage_path)
           const buf = await (await fetch(url)).arrayBuffer()
+
+          try {
+            const info = await extractBookMetadata(buf, b.format)
+            if ((info.title && info.title !== b.title) || info.author) {
+              const fields = {
+                ...(info.title ? { title: info.title } : {}),
+                ...(info.author ? { author: info.author } : {}),
+              }
+              await updateBookMetadata(b.id, fields)
+              setBooks((prev) => prev.map((x) => (
+                x.id === b.id ? { ...x, title: info.title ?? x.title, author: info.author ?? x.author } : x
+              )))
+            }
+          } catch {
+            // metadata backfill failure must not block cover extraction
+          }
+
           const blob = await extractCoverBlob(buf, b.format)
           if (!blob) return
           path = await saveCover(b.id, blob)
@@ -54,7 +73,13 @@ export function LibraryPage() {
 
   async function handleUpload(file: File, meta: { title: string; format: BookFormat }) {
     try {
-      await uploadBook(file, meta)
+      const buf = await file.arrayBuffer()
+      const info = await extractBookMetadata(buf, meta.format)
+      await uploadBook(file, {
+        title: info.title ?? meta.title,
+        author: info.author ?? undefined,
+        format: meta.format,
+      })
       await refresh()
     } catch (e) {
       setError((e as Error).message)

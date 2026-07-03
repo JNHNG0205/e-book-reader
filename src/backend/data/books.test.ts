@@ -19,6 +19,7 @@ import {
   getBookFileUrl,
   getCoverUrl,
   saveCover,
+  updateBookMetadata,
 } from './books'
 
 beforeEach(() => {
@@ -56,6 +57,15 @@ test('renameBook updates the title for the given id', async () => {
   from.mockReturnValue({ update })
   await renameBook('b1', 'New Title')
   expect(update).toHaveBeenCalledWith({ title: 'New Title' })
+  expect(eq).toHaveBeenCalledWith('id', 'b1')
+})
+
+test('updateBookMetadata updates the given fields for the id', async () => {
+  const eq = vi.fn().mockResolvedValue({ error: null })
+  const update = vi.fn().mockReturnValue({ eq })
+  from.mockReturnValue({ update })
+  await updateBookMetadata('b1', { title: 'New Title', author: 'New Author' })
+  expect(update).toHaveBeenCalledWith({ title: 'New Title', author: 'New Author' })
   expect(eq).toHaveBeenCalledWith('id', 'b1')
 })
 

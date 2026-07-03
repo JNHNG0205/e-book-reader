@@ -6,6 +6,7 @@ import { beforeEach, expect, test, vi } from 'vitest'
 // vi.mock is hoisted; create mock fns via vi.hoisted() so the factory can use them.
 const {
   listBooks, uploadBook, deleteBook, renameBook, getCoverUrl, getBookFileUrl, saveCover,
+  updateBookMetadata,
 } = vi.hoisted(() => ({
   listBooks: vi.fn(),
   uploadBook: vi.fn(),
@@ -14,13 +15,18 @@ const {
   getCoverUrl: vi.fn(),
   getBookFileUrl: vi.fn(),
   saveCover: vi.fn(),
+  updateBookMetadata: vi.fn(),
 }))
 vi.mock('@backend/data/books', () => ({
   listBooks, uploadBook, deleteBook, renameBook, getCoverUrl, getBookFileUrl, saveCover,
+  updateBookMetadata,
 }))
 
 const { extractCoverBlob } = vi.hoisted(() => ({ extractCoverBlob: vi.fn() }))
 vi.mock('@frontend/library/coverExtract', () => ({ extractCoverBlob }))
+
+const { extractBookMetadata } = vi.hoisted(() => ({ extractBookMetadata: vi.fn() }))
+vi.mock('@frontend/library/bookMetadata', () => ({ extractBookMetadata }))
 
 import { LibraryPage } from './LibraryPage'
 
@@ -33,6 +39,8 @@ beforeEach(() => {
   getCoverUrl.mockResolvedValue('https://example.com/signed-cover.png')
   saveCover.mockResolvedValue('covers/b1.png')
   extractCoverBlob.mockResolvedValue(null)
+  extractBookMetadata.mockResolvedValue({ title: null, author: null })
+  updateBookMetadata.mockResolvedValue(undefined)
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
     arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
   }))
@@ -55,6 +63,22 @@ test('uploads a selected pdf file with format inferred from extension', async ()
     expect(uploadBook).toHaveBeenCalledWith(
       file,
       expect.objectContaining({ title: 'My Book', format: 'pdf' }),
+    ),
+  )
+})
+
+test('uploads with embedded metadata title/author when extraction succeeds', async () => {
+  uploadBook.mockResolvedValue({ id: 'b2', title: 'Embedded Title', author: 'A', format: 'pdf' })
+  extractBookMetadata.mockResolvedValue({ title: 'Embedded Title', author: 'A' })
+  render(<MemoryRouter><LibraryPage /></MemoryRouter>)
+  await screen.findByText('Dune')
+  const file = new File(['%PDF'], 'My Book.pdf', { type: 'application/pdf' })
+  const input = screen.getByLabelText(/add book/i)
+  await userEvent.upload(input, file)
+  await waitFor(() =>
+    expect(uploadBook).toHaveBeenCalledWith(
+      file,
+      expect.objectContaining({ title: 'Embedded Title', author: 'A', format: 'pdf' }),
     ),
   )
 })

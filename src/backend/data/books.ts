@@ -45,6 +45,14 @@ export async function renameBook(id: string, title: string): Promise<void> {
   if (error) throw error
 }
 
+export async function updateBookMetadata(
+  bookId: string,
+  fields: { title?: string; author?: string },
+): Promise<void> {
+  const { error } = await supabase.from('books').update(fields).eq('id', bookId)
+  if (error) throw error
+}
+
 export async function getBook(id: string): Promise<Book> {
   const { data, error } = await supabase.from('books').select('*').eq('id', id).single()
   if (error) throw error
