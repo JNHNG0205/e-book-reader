@@ -7,14 +7,20 @@ export interface ReaderToolbarProps {
   onZoomIn: () => void
   onZoomOut: () => void
   onBack: () => void
+  onAddBookmark: () => void
+  onToggleSidebar: () => void
 }
 
 export function ReaderToolbar({
-  page, numPages, scale, onPrev, onNext, onZoomIn, onZoomOut, onBack,
+  page, numPages, scale, onPrev, onNext, onZoomIn, onZoomOut, onBack, onAddBookmark, onToggleSidebar,
 }: ReaderToolbarProps) {
   return (
     <div className="flex items-center justify-between gap-4 border-b bg-white px-4 py-2 text-sm">
-      <button type="button" onClick={onBack} className="text-blue-600">← Library</button>
+      <div className="flex items-center gap-2">
+        <button type="button" onClick={onBack} className="text-blue-600">← Library</button>
+        <button type="button" aria-label="Bookmarks" onClick={onToggleSidebar} className="rounded border px-2 py-1">☰</button>
+        <button type="button" aria-label="Add bookmark" onClick={onAddBookmark} className="rounded border px-2 py-1">🔖</button>
+      </div>
       <div className="flex items-center gap-2">
         <button
           type="button" aria-label="Previous page" onClick={onPrev} disabled={page <= 1}
