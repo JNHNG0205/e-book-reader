@@ -1,14 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { getProgress, saveProgress } from '@backend/data/progress'
 import { listBookmarks, saveBookmark, deleteBookmark } from '@backend/data/bookmarks'
+import { listHighlights, saveHighlight, updateHighlight, deleteHighlight } from '@backend/data/highlights'
 import { EpubViewer, type EpubViewerHandle, type EpubTheme } from './EpubViewer'
 import { EpubToolbar } from './EpubToolbar'
 import { TocPanel } from './TocPanel'
 import { ReaderSidebar } from './ReaderSidebar'
 import { BookmarksPanel } from './BookmarksPanel'
+import { HighlightsPanel } from './HighlightsPanel'
+import { HighlightPopover } from './HighlightPopover'
 import { BookmarkStar } from './BookmarkStar'
 import type { TocItem } from './epubToc'
-import type { Bookmark } from '@shared/types'
+import type { Bookmark, Highlight } from '@shared/types'
 import { loadReaderSettings, saveReaderSettings } from './readerSettings'
 
 const THEMES: EpubTheme[] = ['light', 'dark', 'sepia']
@@ -36,6 +39,11 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null)
   const [currentCfi, setCurrentCfi] = useState<string | null>(null)
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
+  const [highlights, setHighlights] = useState<Highlight[]>([])
+  const [popover, setPopover] = useState<null | {
+    mode: 'create' | 'edit'; x: number; y: number; cfiRange?: string; text?: string
+    id?: string; color?: string; note?: string | null
+  }>(null)
 
   // Load the saved position before mounting the viewer, so it resumes correctly.
   useEffect(() => {
@@ -53,6 +61,39 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
 
   // Load bookmarks on mount.
   useEffect(() => { listBookmarks(bookId).then(setBookmarks).catch(() => {}) }, [bookId])
+
+  // Load highlights on mount.
+  useEffect(() => { listHighlights(bookId).then(setHighlights).catch(() => {}) }, [bookId])
+
+  const viewerHighlights = highlights.map((h) => ({
+    id: h.id,
+    cfiRange: String((h.anchor as { cfiRange?: string }).cfiRange ?? ''),
+    color: h.color,
+  }))
+
+  async function createHighlight(color: string) {
+    if (!popover?.cfiRange) return
+    const bm = await saveHighlight(bookId, { color, anchor: { cfiRange: popover.cfiRange, text: popover.text ?? '' } })
+    setHighlights((prev) => [...prev, bm])
+    setPopover(null)
+  }
+  async function changeColor(color: string) {
+    if (!popover?.id) return
+    await updateHighlight(popover.id, { color })
+    setHighlights((prev) => prev.map((h) => (h.id === popover.id ? { ...h, color } : h)))
+    setPopover(null)
+  }
+  async function saveNote(note: string) {
+    if (!popover?.id) return
+    await updateHighlight(popover.id, { note })
+    setHighlights((prev) => prev.map((h) => (h.id === popover.id ? { ...h, note } : h)))
+    setPopover(null)
+  }
+  async function removeHighlight(id: string) {
+    await deleteHighlight(id)
+    setHighlights((prev) => prev.filter((h) => h.id !== id))
+    setPopover(null)
+  }
 
   function onRelocated(cfi: string) {
     setCurrentCfi(cfi)
@@ -133,6 +174,13 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
                   onDelete={removeBookmark}
                 />
               ) },
+              { key: 'highlights', label: 'Highlights', render: () => (
+                <HighlightsPanel
+                  highlights={highlights}
+                  onJump={(h) => viewerRef.current?.goTo(String((h.anchor as { cfiRange?: string }).cfiRange ?? ''))}
+                  onDelete={removeHighlight}
+                />
+              ) },
             ]}
           />
         )}
@@ -150,8 +198,24 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
             onToc={setToc}
             onProgress={setProgress}
             onSection={handleSection}
+            highlights={viewerHighlights}
+            onSelect={(s) => setPopover({ mode: 'create', x: s.x, y: s.y, cfiRange: s.cfiRange, text: s.text })}
+            onHighlightClick={(id, x, y) => {
+              const h = highlights.find((v) => v.id === id)
+              if (h) setPopover({ mode: 'edit', x, y, id, color: h.color, note: h.note })
+            }}
           />
         </div>
+        {popover && (
+          <HighlightPopover
+            x={popover.x} y={popover.y} mode={popover.mode}
+            color={popover.color} note={popover.note}
+            onPickColor={(c) => { void (popover.mode === 'create' ? createHighlight(c) : changeColor(c)) }}
+            onSaveNote={(n) => { void saveNote(n) }}
+            onDelete={() => { if (popover.id) void removeHighlight(popover.id) }}
+            onClose={() => setPopover(null)}
+          />
+        )}
       </div>
     </div>
   )

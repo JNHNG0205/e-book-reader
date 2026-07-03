@@ -25,6 +25,10 @@ const { listBookmarks, saveBookmark, deleteBookmark } = vi.hoisted(() => ({
   listBookmarks: vi.fn(), saveBookmark: vi.fn(), deleteBookmark: vi.fn(),
 }))
 vi.mock('@backend/data/bookmarks', () => ({ listBookmarks, saveBookmark, deleteBookmark }))
+const { listHighlights, saveHighlight, updateHighlight, deleteHighlight } = vi.hoisted(() => ({
+  listHighlights: vi.fn(), saveHighlight: vi.fn(), updateHighlight: vi.fn(), deleteHighlight: vi.fn(),
+}))
+vi.mock('@backend/data/highlights', () => ({ listHighlights, saveHighlight, updateHighlight, deleteHighlight }))
 
 import { EpubReader } from './EpubReader'
 
@@ -36,6 +40,10 @@ beforeEach(() => {
   listBookmarks.mockResolvedValue([])
   saveBookmark.mockResolvedValue({ id: 'bm1' })
   deleteBookmark.mockResolvedValue(undefined)
+  listHighlights.mockResolvedValue([])
+  saveHighlight.mockResolvedValue(undefined)
+  updateHighlight.mockResolvedValue(undefined)
+  deleteHighlight.mockResolvedValue(undefined)
 })
 
 test('renders the viewer and passes the file url + resumed cfi', async () => {
@@ -138,4 +146,25 @@ test('shows bookmarks in the sidebar and jumps via goTo', async () => {
   await userEvent.click(await screen.findByRole('button', { name: 'Bookmarks' }))
   await userEvent.click(await screen.findByRole('button', { name: 'Loc 42' }))
   expect(goTo).toHaveBeenCalledWith('epubcfi(/6/20!/4)')
+})
+
+test('creates a highlight from a selection', async () => {
+  saveHighlight.mockResolvedValue({ id: 'h1', color: 'yellow', anchor: { cfiRange: 'epubcfi(sel)', text: 'hi' }, note: null, user_id: 'u1', book_id: 'b1', created_at: '', updated_at: '' })
+  await act(async () => { render(<EpubReader bookId="b1" fileUrl="https://x/y.epub" onBack={() => {}} />) })
+  act(() => { (viewerProps.current?.onSelect as (s: unknown) => void)({ cfiRange: 'epubcfi(sel)', text: 'hi', x: 20, y: 20 }) })
+  await userEvent.click(await screen.findByRole('button', { name: /yellow/i }))
+  await waitFor(() => expect(saveHighlight).toHaveBeenCalledWith('b1', expect.objectContaining({
+    color: 'yellow', anchor: expect.objectContaining({ cfiRange: 'epubcfi(sel)', text: 'hi' }),
+  })))
+})
+
+test('shows highlights in the Highlights tab and jumps', async () => {
+  listHighlights.mockResolvedValue([
+    { id: 'h1', color: 'green', note: null, anchor: { cfiRange: 'epubcfi(hl1)', text: 'saved bit' }, user_id: 'u1', book_id: 'b1', created_at: '', updated_at: '' },
+  ])
+  await act(async () => { render(<EpubReader bookId="b1" fileUrl="https://x/y.epub" onBack={() => {}} />) })
+  await userEvent.click(screen.getByRole('button', { name: /toggle contents/i }))
+  await userEvent.click(await screen.findByRole('button', { name: 'Highlights' }))
+  await userEvent.click(await screen.findByText(/saved bit/))
+  expect(goTo).toHaveBeenCalledWith('epubcfi(hl1)')
 })
