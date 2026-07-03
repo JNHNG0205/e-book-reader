@@ -4,16 +4,16 @@ import { beforeEach, expect, test, vi } from 'vitest'
 
 // Capture the props EpubReader passes to the (mocked) EpubViewer, and expose a way
 // to drive its callbacks. The mock also wires the imperative ref's next/prev.
-const { viewerProps, next, prev, goTo, clearSelection } = vi.hoisted(() => ({
+const { viewerProps, next, prev, goTo, clearSelection, search } = vi.hoisted(() => ({
   viewerProps: { current: null as Record<string, unknown> | null },
-  next: vi.fn(), prev: vi.fn(), goTo: vi.fn(), clearSelection: vi.fn(),
+  next: vi.fn(), prev: vi.fn(), goTo: vi.fn(), clearSelection: vi.fn(), search: vi.fn(),
 }))
 vi.mock('./EpubViewer', () => ({
   EpubViewer: (props: Record<string, unknown> & { ref?: unknown }) => {
     viewerProps.current = props
     // Assign the imperative handle to the forwarded ref.
     const ref = (props as { ref?: { current: unknown } }).ref
-    if (ref && typeof ref === 'object') ref.current = { next, prev, goTo, clearSelection }
+    if (ref && typeof ref === 'object') ref.current = { next, prev, goTo, clearSelection, search }
     return <div data-testid="epub-viewer" />
   },
 }))
@@ -44,6 +44,7 @@ beforeEach(() => {
   saveHighlight.mockResolvedValue(undefined)
   updateHighlight.mockResolvedValue(undefined)
   deleteHighlight.mockResolvedValue(undefined)
+  search.mockResolvedValue([])
 })
 
 test('renders the viewer and passes the file url + resumed cfi', async () => {
@@ -167,4 +168,22 @@ test('shows highlights in the Highlights tab and jumps', async () => {
   await userEvent.click(await screen.findByRole('button', { name: 'Highlights' }))
   await userEvent.click(await screen.findByText(/saved bit/))
   expect(goTo).toHaveBeenCalledWith('epubcfi(hl1)')
+})
+
+test('searches the book from the Search tab and jumps to a result', async () => {
+  search.mockResolvedValue([
+    { id: 'epubcfi(/6/2!/2)', location: 'epubcfi(/6/2!/2)', excerpt: 'a whale swam by' },
+  ])
+  await act(async () => { render(<EpubReader bookId="b1" fileUrl="https://x/y.epub" onBack={() => {}} />) })
+  await userEvent.click(screen.getByRole('button', { name: /toggle contents/i }))
+  // "Search" labels both the sidebar tab button and (once active) the panel's submit
+  // button — the tab is the first "Search"-named button in DOM order.
+  const [searchTab] = await screen.findAllByRole('button', { name: 'Search' })
+  await userEvent.click(searchTab)
+  await userEvent.type(screen.getByPlaceholderText(/search this book/i), 'whale')
+  const searchButtons = screen.getAllByRole('button', { name: 'Search' })
+  await userEvent.click(searchButtons[searchButtons.length - 1])
+  expect(search).toHaveBeenCalledWith('whale')
+  await userEvent.click(await screen.findByText(/a whale swam by/))
+  expect(goTo).toHaveBeenCalledWith('epubcfi(/6/2!/2)')
 })

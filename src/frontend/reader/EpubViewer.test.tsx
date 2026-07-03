@@ -53,7 +53,22 @@ const {
       each: (cb: (item: { href?: string }) => void) => {
         [{ href: 'text/chapter1.xhtml' }, { href: 'text/chapter2.xhtml' }].forEach(cb)
       },
+      spineItems: [
+        {
+          href: 'text/chapter1.xhtml',
+          load: vi.fn().mockResolvedValue(undefined),
+          unload: vi.fn(),
+          find: vi.fn(() => [{ cfi: 'epubcfi(/6/2!/2)', excerpt: 'a whale swam by' }]),
+        },
+        {
+          href: 'text/chapter2.xhtml',
+          load: vi.fn().mockResolvedValue(undefined),
+          unload: vi.fn(),
+          find: vi.fn(() => [{ cfi: 'epubcfi(/6/4!/2)', excerpt: 'another whale sighting' }]),
+        },
+      ],
     },
+    load: vi.fn(),
   }
   const ePub = vi.fn(() => book)
   return {
@@ -343,6 +358,35 @@ test('reports a text selection on mouseup via onSelect', async () => {
   expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({
     cfiRange: 'epubcfi(sel)', text: 'selected words',
   }))
+})
+
+test('search iterates spine sections, maps results, and unloads each section', async () => {
+  const ref = createRef<EpubViewerHandle>()
+  render(
+    <EpubViewer ref={ref} fileUrl="https://x/y.epub"
+      fontSize={100} theme="light" onRelocated={() => {}} onToc={() => {}} />,
+  )
+  await vi.waitFor(() => expect(rendition.display).toHaveBeenCalled())
+
+  const results = await ref.current!.search('whale')
+
+  expect(results).toEqual([
+    { id: 'epubcfi(/6/2!/2)', location: 'epubcfi(/6/2!/2)', excerpt: 'a whale swam by' },
+    { id: 'epubcfi(/6/4!/2)', location: 'epubcfi(/6/4!/2)', excerpt: 'another whale sighting' },
+  ])
+  for (const item of _book.spine.spineItems) {
+    expect(item.load).toHaveBeenCalled()
+    expect(item.unload).toHaveBeenCalled()
+  }
+})
+
+test('search returns an empty array for a blank query or when there is no book yet', async () => {
+  const ref = createRef<EpubViewerHandle>()
+  render(
+    <EpubViewer ref={ref} fileUrl="https://x/y.epub"
+      fontSize={100} theme="light" onRelocated={() => {}} onToc={() => {}} />,
+  )
+  expect(await ref.current!.search('   ')).toEqual([])
 })
 
 test('dismisses on a new mousedown inside the book', async () => {

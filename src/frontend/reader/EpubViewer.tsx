@@ -4,6 +4,7 @@ import {
 import ePub, { type Rendition } from 'epubjs'
 import { flattenToc, type TocItem } from './epubToc'
 import { colorValue } from './highlightColors'
+import type { SearchResult } from './searchTypes'
 
 export type EpubTheme = 'light' | 'dark' | 'sepia'
 
@@ -14,6 +15,9 @@ export interface EpubViewerHandle {
   // Clears the native text selection (called once a highlight is created/cancelled, so
   // the selection stays visible while the color popover is open).
   clearSelection: () => void
+  // Searches every spine section for `query`, returning matches as SearchResult[]
+  // (capped at 200). Returns [] if there's no book yet or the query is blank.
+  search: (query: string) => Promise<SearchResult[]>
 }
 
 export interface EpubViewerProps {
@@ -357,6 +361,35 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
       void r.display(resolveTocTarget(bookRef.current, target)).catch(() => { /* target unresolved */ })
     },
     clearSelection: () => { selectionWindowRef.current?.getSelection()?.removeAllRanges() },
+    search: async (query: string): Promise<SearchResult[]> => {
+      const book = bookRef.current
+      const q = query.trim()
+      if (!book || !q) return []
+      const out: SearchResult[] = []
+      const LIMIT = 200
+      const items = (book.spine as unknown as { spineItems: Array<{
+        href?: string
+        load: (l: unknown) => Promise<unknown>
+        unload: () => void
+        find: (q: string) => Array<{ cfi: string; excerpt: string }>
+      }> }).spineItems
+      const loader = (book.load as unknown as { bind: (b: unknown) => unknown }).bind(book)
+      for (const item of items) {
+        if (out.length >= LIMIT) break
+        try {
+          await item.load(loader)
+          for (const m of item.find(q)) {
+            out.push({ id: m.cfi, location: m.cfi, excerpt: m.excerpt })
+            if (out.length >= LIMIT) break
+          }
+        } catch {
+          /* skip a section that fails to load */
+        } finally {
+          item.unload()
+        }
+      }
+      return out
+    },
   }), [])
 
   // Create the book + rendition once per file.

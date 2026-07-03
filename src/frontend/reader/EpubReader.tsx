@@ -8,6 +8,7 @@ import { TocPanel } from './TocPanel'
 import { ReaderSidebar } from './ReaderSidebar'
 import { BookmarksPanel } from './BookmarksPanel'
 import { HighlightsPanel } from './HighlightsPanel'
+import { SearchPanel } from './SearchPanel'
 import { HighlightPopover } from './HighlightPopover'
 import { BookmarkStar } from './BookmarkStar'
 import type { TocItem } from './epubToc'
@@ -190,6 +191,12 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
                   highlights={highlights}
                   onJump={(h) => viewerRef.current?.goTo(String((h.anchor as { cfiRange?: string }).cfiRange ?? ''))}
                   onDelete={removeHighlight}
+                />
+              ) },
+              { key: 'search', label: 'Search', render: () => (
+                <SearchPanel
+                  onSearch={(q) => viewerRef.current?.search(q) ?? Promise.resolve([])}
+                  onJump={(r) => viewerRef.current?.goTo(r.location)}
                 />
               ) },
             ]}
