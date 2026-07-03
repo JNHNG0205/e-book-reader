@@ -21,6 +21,9 @@ export interface EpubViewerProps {
   onRelocated: (cfi: string) => void
   onToc: (toc: TocItem[]) => void
   onProgress?: (p: { current: number; total: number }) => void
+  // Current section href on each relocation — used to keep the TOC highlight in sync
+  // with the actual reading position (in-book links, page turns), not just sidebar clicks.
+  onSection?: (href: string) => void
 }
 
 // Generating epub.js "locations" (the index behind the "X / Y" progress count) is slow
@@ -185,7 +188,7 @@ function reportProgressForCfi(
 }
 
 export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function EpubViewer(
-  { fileUrl, bookId, initialCfi, fontSize, theme, onRelocated, onToc, onProgress },
+  { fileUrl, bookId, initialCfi, fontSize, theme, onRelocated, onToc, onProgress, onSection },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -194,11 +197,13 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
   const onRelocatedRef = useRef(onRelocated)
   const onTocRef = useRef(onToc)
   const onProgressRef = useRef(onProgress)
+  const onSectionRef = useRef(onSection)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => { onRelocatedRef.current = onRelocated }, [onRelocated])
   useEffect(() => { onTocRef.current = onToc }, [onToc])
   useEffect(() => { onProgressRef.current = onProgress }, [onProgress])
+  useEffect(() => { onSectionRef.current = onSection }, [onSection])
 
   useImperativeHandle(ref, () => ({
     next: () => renditionRef.current?.next(),
@@ -241,9 +246,10 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
           void fixArchivedImages(currentBook, contents.document)
         })
         void rendition.display(initialCfi ?? undefined)
-        rendition.on('relocated', (loc: { start: { cfi: string } }) => {
+        rendition.on('relocated', (loc: { start: { cfi: string; href?: string } }) => {
           onRelocatedRef.current(loc.start.cfi)
           reportProgressForCfi(currentBook, loc.start.cfi, onProgressRef)
+          if (loc.start.href) onSectionRef.current?.(loc.start.href)
         })
         void book.loaded.navigation
           .then((nav: { toc: Parameters<typeof flattenToc>[0] }) => { onTocRef.current(flattenToc(nav.toc)) })

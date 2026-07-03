@@ -6,13 +6,13 @@ import {
 
 // Shared fake rendition/book captured per test.
 const { rendition, book: _book, ePub, relocatedHandlers, contentHandlers } = vi.hoisted(() => {
-  const relocatedHandlers: Array<(loc: { start: { cfi: string } }) => void> = []
+  const relocatedHandlers: Array<(loc: { start: { cfi: string; href?: string } }) => void> = []
   const contentHandlers: Array<(contents: { document: Document }) => void> = []
   const rendition = {
     display: vi.fn().mockResolvedValue(undefined),
     next: vi.fn(),
     prev: vi.fn(),
-    on: vi.fn((event: string, cb: (loc: { start: { cfi: string } }) => void) => {
+    on: vi.fn((event: string, cb: (loc: { start: { cfi: string; href?: string } }) => void) => {
       if (event === 'relocated') relocatedHandlers.push(cb)
     }),
     hooks: {
@@ -135,6 +135,17 @@ test('reports relocation as a cfi', async () => {
   })
   relocatedHandlers[0]?.({ start: { cfi: 'epubcfi(/6/8!/4)' } })
   expect(onRelocated).toHaveBeenCalledWith('epubcfi(/6/8!/4)')
+})
+
+test('reports the current section href on relocation', async () => {
+  const onSection = vi.fn()
+  render(
+    <EpubViewer fileUrl="https://x/y.epub"
+      fontSize={100} theme="light" onRelocated={() => {}} onToc={() => {}} onSection={onSection} />,
+  )
+  await vi.waitFor(() => expect(relocatedHandlers.length).toBeGreaterThan(0))
+  relocatedHandlers[0]?.({ start: { cfi: 'epubcfi(/6/8!/4)', href: 'text/chapter2.xhtml' } })
+  expect(onSection).toHaveBeenCalledWith('text/chapter2.xhtml')
 })
 
 test('applies font size to the rendition themes', async () => {

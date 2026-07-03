@@ -61,6 +61,15 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => () => { if (saveTimer.current) clearTimeout(saveTimer.current) }, [])
 
+  // Keep the sidebar TOC highlight in sync with the actual reading position (page
+  // turns, in-book links) by matching the current section's file to a TOC entry.
+  function handleSection(sectionHref: string) {
+    const base = sectionHref.split('#')[0].split('/').pop()
+    if (!base) return
+    const matched = toc.find((t) => t.href.split('#')[0].split('/').pop() === base)
+    if (matched) setActiveHref(matched.href)
+  }
+
   async function addBookmark() {
     // Fall back to the resume position if the reader hasn't emitted a relocation yet
     // (e.g. tapping the bookmark button immediately after opening).
@@ -129,6 +138,7 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
             onRelocated={onRelocated}
             onToc={setToc}
             onProgress={setProgress}
+            onSection={handleSection}
           />
         </div>
       </div>
