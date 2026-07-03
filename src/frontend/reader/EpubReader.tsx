@@ -10,6 +10,14 @@ const THEMES: EpubTheme[] = ['light', 'dark', 'sepia']
 const MIN_FONT = 70
 const MAX_FONT = 200
 
+// Background for the area around the reading column, matched to the theme so the
+// letterbox on wide screens blends with the page instead of showing a bright frame.
+const AREA_BG: Record<EpubTheme, string> = {
+  light: 'bg-gray-100',
+  dark: 'bg-neutral-900',
+  sepia: 'bg-[#efe6d2]',
+}
+
 export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUrl: string; onBack: () => void }) {
   const viewerRef = useRef<EpubViewerHandle>(null)
   const initial = loadReaderSettings()
@@ -58,14 +66,16 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
         onToggleToc={() => setTocOpen((v) => !v)}
         onBack={onBack}
       />
-      <div className="flex min-h-0 flex-1">
+      <div className={`flex min-h-0 flex-1 justify-center ${AREA_BG[theme]}`}>
         {tocOpen && (
           <TocPanel
             items={toc}
             onNavigate={(href) => { viewerRef.current?.goTo(href); setTocOpen(false) }}
           />
         )}
-        <div className="min-h-0 flex-1">
+        {/* Constrain the reading column to a book-like width so lines don't stretch
+            across a wide desktop; epub.js paginates to this container's width. */}
+        <div className="min-h-0 w-full max-w-2xl">
           <EpubViewer
             ref={viewerRef}
             fileUrl={fileUrl}
