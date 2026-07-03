@@ -10,7 +10,7 @@ const THEMES: EpubTheme[] = ['light', 'dark', 'sepia']
 const MIN_FONT = 70
 const MAX_FONT = 200
 
-export function EpubReader({ bookId, fileUrl }: { bookId: string; fileUrl: string }) {
+export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUrl: string; onBack: () => void }) {
   const viewerRef = useRef<EpubViewerHandle>(null)
   const initial = loadReaderSettings()
   const [fontSize, setFontSize] = useState(initial.fontSize)
@@ -56,7 +56,7 @@ export function EpubReader({ bookId, fileUrl }: { bookId: string; fileUrl: strin
         onFontSmaller={smaller} onFontLarger={larger}
         onCycleTheme={cycleTheme}
         onToggleToc={() => setTocOpen((v) => !v)}
-        onBack={() => window.history.back()}
+        onBack={onBack}
       />
       <div className="flex min-h-0 flex-1">
         {tocOpen && (

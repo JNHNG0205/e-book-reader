@@ -19,7 +19,7 @@ vi.mock('@frontend/reader/PdfViewer', () => ({
   },
 }))
 vi.mock('@frontend/reader/EpubReader', () => ({
-  EpubReader: ({ bookId, fileUrl }: { bookId: string; fileUrl: string }) => (
+  EpubReader: ({ bookId, fileUrl }: { bookId: string; fileUrl: string; onBack?: () => void }) => (
     <div data-testid="epub-reader">{bookId}:{fileUrl}</div>
   ),
 }))

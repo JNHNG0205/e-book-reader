@@ -29,8 +29,10 @@ export function ReaderPage() {
         if (!active) return
         setBook(b)
         setFileUrl(await getBookFileUrl(b.storage_path))
-        const saved = await getProgress(bookId)
-        if (active && saved) setPage(Math.max(1, parseInt(saved, 10) || 1))
+        if (b.format === 'pdf') {
+          const saved = await getProgress(bookId)
+          if (active && saved) setPage(Math.max(1, parseInt(saved, 10) || 1))
+        }
       } catch (e) {
         if (active) setError((e as Error).message)
       }
@@ -40,15 +42,15 @@ export function ReaderPage() {
 
   const didMount = useRef(false)
   useEffect(() => {
-    if (!bookId) return
+    if (!bookId || book?.format !== 'pdf') return
     if (!didMount.current) { didMount.current = true; return }
     const t = setTimeout(() => { void saveProgress(bookId, String(page)) }, 500)
     return () => clearTimeout(t)
-  }, [bookId, page])
+  }, [bookId, page, book])
 
   useEffect(() => {
-    if (numPages && page > numPages) setPage(numPages)
-  }, [numPages, page])
+    if (book?.format === 'pdf' && numPages && page > numPages) setPage(numPages)
+  }, [book, numPages, page])
 
   const goBack = useCallback(() => navigate('/'), [navigate])
   const prev = () => setPage((p) => Math.max(1, p - 1))
@@ -71,7 +73,7 @@ export function ReaderPage() {
         {book.format === 'pdf' && fileUrl ? (
           <PdfViewer fileUrl={fileUrl} pageNumber={page} scale={scale} onNumPages={setNumPages} />
         ) : book.format === 'epub' && fileUrl ? (
-          <EpubReader bookId={book.id} fileUrl={fileUrl} />
+          <EpubReader bookId={book.id} fileUrl={fileUrl} onBack={goBack} />
         ) : (
           <div className="p-8 text-gray-500">Loading…</div>
         )}
