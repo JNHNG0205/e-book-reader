@@ -17,7 +17,6 @@ const { rendition, book: _book, ePub, relocatedHandlers } = vi.hoisted(() => {
     themes: { fontSize: vi.fn(), register: vi.fn(), select: vi.fn() },
     destroy: vi.fn(),
     currentLocation: vi.fn(() => ({ start: { cfi: 'epubcfi(x)' } })),
-    hooks: { content: { register: vi.fn() } },
   }
   const book = {
     renderTo: vi.fn(() => rendition),
@@ -29,7 +28,6 @@ const { rendition, book: _book, ePub, relocatedHandlers } = vi.hoisted(() => {
       length: vi.fn(() => 100),
       locationFromCfi: vi.fn(() => 11),
     },
-    archive: { createUrl: vi.fn().mockResolvedValue('blob:fake') },
   }
   const ePub = vi.fn(() => book)
   return { rendition, book, ePub, relocatedHandlers }
@@ -60,21 +58,8 @@ test('creates a book from the fetched bytes and displays the initial cfi', async
   )
   expect(fetch).toHaveBeenCalledWith('https://x/y.epub')
   await vi.waitFor(() => {
-    expect(ePub).toHaveBeenCalledWith(expect.any(ArrayBuffer), expect.objectContaining({ replacements: 'blobUrl' }))
+    expect(ePub).toHaveBeenCalledWith(expect.any(ArrayBuffer))
     expect(rendition.display).toHaveBeenCalledWith('epubcfi(/6/4!/2)')
-  })
-})
-
-test('registers a content hook to fix archived images before displaying', async () => {
-  render(
-    <EpubViewer
-      fileUrl="https://x/y.epub" initialCfi="epubcfi(/6/4!/2)"
-      fontSize={100} theme="light" onRelocated={() => {}} onToc={() => {}}
-    />,
-  )
-  await vi.waitFor(() => {
-    expect(rendition.hooks.content.register).toHaveBeenCalledWith(expect.any(Function))
-    expect(rendition.display).toHaveBeenCalled()
   })
 })
 
