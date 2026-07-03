@@ -41,6 +41,14 @@ const { rendition, book: _book, ePub, relocatedHandlers, contentHandlers } = vi.
       urls: ['images/00013.jpg', 'style.css'],
       get: vi.fn().mockResolvedValue('blob:fake-image'),
     },
+    spine: {
+      // 'chapter1.xhtml' resolves directly; anything else does not (simulating a
+      // path-prefix mismatch), forcing the filename fallback.
+      get: vi.fn((t: string) => (t.split('#')[0] === 'chapter1.xhtml' ? {} : null)),
+      each: (cb: (item: { href?: string }) => void) => {
+        [{ href: 'text/chapter1.xhtml' }, { href: 'text/chapter2.xhtml' }].forEach(cb)
+      },
+    },
   }
   const ePub = vi.fn(() => book)
   return { rendition, book, ePub, relocatedHandlers, contentHandlers }
@@ -91,6 +99,29 @@ test('exposes next/prev via the ref', async () => {
   ref.current!.prev()
   expect(rendition.next).toHaveBeenCalled()
   expect(rendition.prev).toHaveBeenCalled()
+})
+
+test('goTo navigates directly when the href resolves in the spine', async () => {
+  const ref = createRef<EpubViewerHandle>()
+  render(
+    <EpubViewer ref={ref} fileUrl="https://x/y.epub"
+      fontSize={100} theme="light" onRelocated={() => {}} onToc={() => {}} />,
+  )
+  await vi.waitFor(() => expect(rendition.display).toHaveBeenCalled())
+  ref.current!.goTo('chapter1.xhtml')
+  expect(rendition.display).toHaveBeenLastCalledWith('chapter1.xhtml')
+})
+
+test('goTo falls back to the spine item with the same filename when the href does not resolve', async () => {
+  const ref = createRef<EpubViewerHandle>()
+  render(
+    <EpubViewer ref={ref} fileUrl="https://x/y.epub"
+      fontSize={100} theme="light" onRelocated={() => {}} onToc={() => {}} />,
+  )
+  await vi.waitFor(() => expect(rendition.display).toHaveBeenCalled())
+  // TOC href with a mismatched path + fragment → resolves to 'text/chapter1.xhtml'.
+  ref.current!.goTo('OEBPS/chapter1.xhtml#section2')
+  expect(rendition.display).toHaveBeenLastCalledWith('text/chapter1.xhtml')
 })
 
 test('reports relocation as a cfi', async () => {

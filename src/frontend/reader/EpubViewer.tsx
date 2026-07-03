@@ -146,6 +146,29 @@ async function fixArchivedImages(book: ReturnType<typeof ePub>, doc: Document): 
 // epub.js's published types claim `locationFromCfi` returns a `Location` object, but at
 // runtime it returns a 0-based location index (number). We report it as a 1-based
 // "page" number so it reads naturally as "current / total".
+// A TOC href sometimes doesn't match the spine's stored href (path-prefix differences),
+// so epub.js's spine.get() returns null and display() silently no-ops — the clicked
+// entry does nothing. When the exact href doesn't resolve, fall back to the spine item
+// with the same filename so the entry still navigates (to that chapter).
+function resolveTocTarget(book: ReturnType<typeof ePub> | null, href: string): string {
+  if (!book) return href
+  try {
+    const spine = book.spine as unknown as {
+      get: (t: string) => unknown
+      each: (cb: (item: { href?: string }) => void) => void
+    }
+    if (spine.get(href)) return href
+    const wanted = href.split('#')[0].split('/').pop()
+    let match: string | null = null
+    spine.each((item) => {
+      if (!match && item.href && item.href.split('/').pop() === wanted) match = item.href
+    })
+    return match ?? href
+  } catch {
+    return href
+  }
+}
+
 // With screen-sized locations (LOCATION_CHARS), the location index reads as a page
 // number: current = index + 1, total = number of locations.
 function reportProgressForCfi(
@@ -167,6 +190,7 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
 ) {
   const containerRef = useRef<HTMLDivElement>(null)
   const renditionRef = useRef<Rendition | null>(null)
+  const bookRef = useRef<ReturnType<typeof ePub> | null>(null)
   const onRelocatedRef = useRef(onRelocated)
   const onTocRef = useRef(onToc)
   const onProgressRef = useRef(onProgress)
@@ -179,7 +203,11 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
   useImperativeHandle(ref, () => ({
     next: () => renditionRef.current?.next(),
     prev: () => renditionRef.current?.prev(),
-    goTo: (target: string) => { void renditionRef.current?.display(target) },
+    goTo: (target: string) => {
+      const r = renditionRef.current
+      if (!r) return
+      void r.display(resolveTocTarget(bookRef.current, target)).catch(() => { /* target unresolved */ })
+    },
   }), [])
 
   // Create the book + rendition once per file.
@@ -203,6 +231,7 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
           width: '100%', height: '100%', flow: 'paginated', spread: 'none',
         })
         renditionRef.current = rendition
+        bookRef.current = book
         applyEpubTheme(rendition, theme)
         rendition.themes.fontSize(`${fontSize}%`)
         const currentBook = book
