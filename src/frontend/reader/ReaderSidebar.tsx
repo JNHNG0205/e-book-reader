@@ -12,7 +12,7 @@ export function ReaderSidebar({ tabs, onClose }: { tabs: SidebarTab[]; onClose: 
   const current = tabs.find((t) => t.key === active) ?? tabs[0]
 
   return (
-    <div className="flex w-96 shrink-0 flex-col border-r bg-white">
+    <div className="flex w-[27rem] shrink-0 flex-col border-r bg-white">
       <div className="flex items-center border-b">
         <div className="flex min-w-0 flex-1 overflow-x-auto">
           {tabs.map((t) => (
@@ -20,7 +20,7 @@ export function ReaderSidebar({ tabs, onClose }: { tabs: SidebarTab[]; onClose: 
               key={t.key}
               type="button"
               onClick={() => setActive(t.key)}
-              className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap px-2.5 py-2 text-sm ${
+              className={`flex shrink-0 items-center gap-1 whitespace-nowrap px-2 py-2 text-sm ${
                 t.key === current?.key ? 'border-b-2 border-black font-medium' : 'text-gray-500'
               }`}
             >

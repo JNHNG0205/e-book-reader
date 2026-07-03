@@ -9,7 +9,7 @@ import { ReaderSidebar } from './ReaderSidebar'
 import { BookmarksPanel } from './BookmarksPanel'
 import { HighlightsPanel } from './HighlightsPanel'
 import { SearchPanel } from './SearchPanel'
-import { ContentsIcon, BookmarkIcon, HighlightIcon, SearchIcon } from './icons'
+import { PanelIcon, ContentsIcon, BookmarkIcon, HighlightIcon, SearchIcon } from './icons'
 import { HighlightPopover } from './HighlightPopover'
 import { BookmarkStar } from './BookmarkStar'
 import type { TocItem } from './epubToc'
@@ -162,10 +162,19 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
         onNext={() => viewerRef.current?.next()}
         onFontSmaller={smaller} onFontLarger={larger}
         onCycleTheme={cycleTheme}
-        onToggleToc={() => setTocOpen((v) => !v)}
         onBack={onBack}
       />
       <div className={`relative flex min-h-0 flex-1 justify-center ${AREA_BG[theme]}`}>
+        {!tocOpen && (
+          <button
+            type="button"
+            aria-label="Menu"
+            onClick={() => setTocOpen(true)}
+            className="absolute left-3 top-3 z-10 rounded-md border bg-white/90 p-1.5 text-gray-700 shadow-sm hover:bg-white"
+          >
+            <PanelIcon className="h-5 w-5" />
+          </button>
+        )}
         <div className="absolute right-3 top-3 z-10">
           <BookmarkStar active={isBookmarked} onToggle={() => { void toggleBookmark() }} />
         </div>

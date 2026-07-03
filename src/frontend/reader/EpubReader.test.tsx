@@ -109,7 +109,7 @@ test('toggling contents again closes the panel', async () => {
     (viewerProps.current?.onToc as (t: unknown) => void)([{ label: 'Ch 1', href: 'c1.xhtml', level: 0 }])
   })
   await userEvent.click(screen.getByRole('button', { name: /menu/i }))
-  await userEvent.click(screen.getByRole('button', { name: /menu/i }))
+  await userEvent.click(screen.getByRole('button', { name: /close panel/i }))
   expect(screen.queryByRole('button', { name: 'Ch 1' })).not.toBeInTheDocument()
 })
 

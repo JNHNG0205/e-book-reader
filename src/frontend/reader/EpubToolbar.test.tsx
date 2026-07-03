@@ -6,7 +6,7 @@ import { EpubToolbar } from './EpubToolbar'
 const props = {
   fontSize: 100, theme: 'light' as const, current: 0, total: 0,
   onPrev: vi.fn(), onNext: vi.fn(), onFontSmaller: vi.fn(), onFontLarger: vi.fn(),
-  onCycleTheme: vi.fn(), onToggleToc: vi.fn(), onBack: vi.fn(),
+  onCycleTheme: vi.fn(), onBack: vi.fn(),
 }
 
 test('shows the page numbers when known', () => {
@@ -28,13 +28,11 @@ test('fires font + theme callbacks', async () => {
   expect(onCycleTheme).toHaveBeenCalled()
 })
 
-test('fires nav + toc + back callbacks', async () => {
-  const onNext = vi.fn(); const onToggleToc = vi.fn(); const onBack = vi.fn()
-  render(<EpubToolbar {...props} onNext={onNext} onToggleToc={onToggleToc} onBack={onBack} />)
+test('fires nav + back callbacks', async () => {
+  const onNext = vi.fn(); const onBack = vi.fn()
+  render(<EpubToolbar {...props} onNext={onNext} onBack={onBack} />)
   await userEvent.click(screen.getByRole('button', { name: /next/i }))
-  await userEvent.click(screen.getByRole('button', { name: /menu/i }))
   await userEvent.click(screen.getByRole('button', { name: /library/i }))
   expect(onNext).toHaveBeenCalled()
-  expect(onToggleToc).toHaveBeenCalled()
   expect(onBack).toHaveBeenCalled()
 })

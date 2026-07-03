@@ -15,7 +15,7 @@ import { HighlightPopover } from '@frontend/reader/HighlightPopover'
 import { BookmarkStar } from '@frontend/reader/BookmarkStar'
 import { SearchPanel } from '@frontend/reader/SearchPanel'
 import { searchPdf } from '@frontend/reader/searchPdf'
-import { BookmarkIcon, HighlightIcon, SearchIcon } from '@frontend/reader/icons'
+import { PanelIcon, BookmarkIcon, HighlightIcon, SearchIcon } from '@frontend/reader/icons'
 import type { NormRect } from '@frontend/reader/pdfHighlightGeometry'
 
 const MIN_SCALE = 0.5
@@ -153,7 +153,6 @@ export function ReaderPage() {
         <ReaderToolbar
           page={page} numPages={numPages} scale={scale}
           onPrev={prev} onNext={next} onZoomIn={zoomIn} onZoomOut={zoomOut} onBack={goBack}
-          onToggleSidebar={() => setSidebarOpen((v) => !v)}
         />
       )}
       <div className="flex flex-1 justify-center overflow-auto bg-gray-100">
@@ -180,6 +179,16 @@ export function ReaderPage() {
               />
             )}
             <div className="relative p-4">
+              {!sidebarOpen && (
+                <button
+                  type="button"
+                  aria-label="Menu"
+                  onClick={() => setSidebarOpen(true)}
+                  className="absolute left-3 top-3 z-10 rounded-md border bg-white/90 p-1.5 text-gray-700 shadow-sm hover:bg-white"
+                >
+                  <PanelIcon className="h-5 w-5" />
+                </button>
+              )}
               <div className="absolute right-3 top-3 z-10">
                 <BookmarkStar active={isBookmarked} onToggle={() => { void toggleBookmark() }} />
               </div>

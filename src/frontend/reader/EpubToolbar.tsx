@@ -1,5 +1,4 @@
 import type { EpubTheme } from './EpubViewer'
-import { PanelIcon } from './icons'
 
 export interface EpubToolbarProps {
   fontSize: number
@@ -11,25 +10,17 @@ export interface EpubToolbarProps {
   onFontSmaller: () => void
   onFontLarger: () => void
   onCycleTheme: () => void
-  onToggleToc: () => void
   onBack: () => void
 }
 
 export function EpubToolbar({
   fontSize, theme, current, total, onPrev, onNext, onFontSmaller, onFontLarger,
-  onCycleTheme, onToggleToc, onBack,
+  onCycleTheme, onBack,
 }: EpubToolbarProps) {
   return (
     <div className="flex items-center justify-between gap-4 border-b bg-white px-4 py-2 text-sm">
       <div className="flex items-center gap-2">
         <button type="button" onClick={onBack} className="text-blue-600">← Library</button>
-        <button
-          type="button"
-          onClick={onToggleToc}
-          className="flex items-center gap-1.5 rounded border px-2 py-1"
-        >
-          <PanelIcon /> Menu
-        </button>
       </div>
       <div className="flex items-center gap-2">
         <button type="button" aria-label="Previous" onClick={onPrev} className="rounded border px-2 py-1">‹</button>

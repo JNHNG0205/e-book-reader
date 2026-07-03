@@ -6,7 +6,6 @@ import { ReaderToolbar } from './ReaderToolbar'
 const baseProps = {
   page: 2, numPages: 10, scale: 1,
   onPrev: vi.fn(), onNext: vi.fn(), onZoomIn: vi.fn(), onZoomOut: vi.fn(), onBack: vi.fn(),
-  onToggleSidebar: vi.fn(),
 }
 
 test('shows the current page and total', () => {
@@ -31,9 +30,3 @@ test('fires callbacks on click', async () => {
   expect(onNext).toHaveBeenCalled()
 })
 
-test('fires onToggleSidebar when the bookmarks sidebar toggle is clicked', async () => {
-  const onToggleSidebar = vi.fn()
-  render(<ReaderToolbar {...baseProps} onToggleSidebar={onToggleSidebar} />)
-  await userEvent.click(screen.getByRole('button', { name: /menu/i }))
-  expect(onToggleSidebar).toHaveBeenCalled()
-})
