@@ -214,34 +214,39 @@ function selectionPosition(contents: {
 // Diffs `highlights` against the ids already applied as epub.js annotations, removing
 // ones that were deleted or recolored and adding new/changed ones — so re-renders don't
 // blindly re-add every highlight (which would leak duplicate marks in the iframe).
+interface AppliedAnnotation { cfiRange: string; color: string }
+
 function syncAnnotations(
   rendition: Rendition,
   highlights: Array<{ id: string; cfiRange: string; color: string }>,
-  applied: Map<string, string>,
+  applied: Map<string, AppliedAnnotation>,
   onHighlightClick: { current?: ((id: string, x: number, y: number) => void) | undefined },
 ): void {
   const annotations = rendition.annotations as unknown as {
     add: (
-      type: string, cfiRange: string, data: unknown, cb: () => void,
+      type: string, cfiRange: string, data: unknown,
+      cb: (e?: { clientX?: number; clientY?: number }) => void,
       className: string, styles: Record<string, string>,
     ) => void
     remove: (cfiRange: string, type: string) => void
   }
-  const next = new Map(highlights.map((h) => [h.id, h.cfiRange]))
-  // remove gone / changed
-  for (const [id, cfi] of applied) {
-    if (!next.has(id)) { annotations.remove(cfi, 'highlight'); applied.delete(id) }
+  const next = new Set(highlights.map((h) => h.id))
+  // remove annotations for highlights that are gone
+  for (const [id, prev] of applied) {
+    if (!next.has(id)) { annotations.remove(prev.cfiRange, 'highlight'); applied.delete(id) }
   }
-  // add new (or re-add ones whose cfiRange/color changed)
+  // add new ones, or re-add ones whose cfiRange OR color changed
   for (const h of highlights) {
-    if (applied.get(h.id) === h.cfiRange) continue
-    if (applied.has(h.id)) annotations.remove(applied.get(h.id)!, 'highlight')
+    const prev = applied.get(h.id)
+    if (prev && prev.cfiRange === h.cfiRange && prev.color === h.color) continue
+    if (prev) annotations.remove(prev.cfiRange, 'highlight')
     annotations.add(
       'highlight', h.cfiRange, { id: h.id },
-      () => onHighlightClick.current?.(h.id, 0, 0),
+      // epub.js calls this with the click event; use its viewport coords for the popover.
+      (e) => onHighlightClick.current?.(h.id, e?.clientX ?? 0, e?.clientY ?? 0),
       `hl-${h.id}`, { fill: colorValue(h.color), 'fill-opacity': '0.35', 'mix-blend-mode': 'multiply' },
     )
-    applied.set(h.id, h.cfiRange)
+    applied.set(h.id, { cfiRange: h.cfiRange, color: h.color })
   }
 }
 
@@ -261,7 +266,7 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
   const onSectionRef = useRef(onSection)
   const onSelectRef = useRef(onSelect)
   const onHighlightClickRef = useRef(onHighlightClick)
-  const appliedRef = useRef(new Map<string, string>())
+  const appliedRef = useRef(new Map<string, AppliedAnnotation>())
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => { onRelocatedRef.current = onRelocated }, [onRelocated])
@@ -333,7 +338,7 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
           onSelectRef.current?.({ cfiRange, text, x, y })
           selection?.removeAllRanges()
         })
-        appliedRef.current = new Map()
+        appliedRef.current = new Map<string, AppliedAnnotation>()
         syncAnnotations(rendition, highlights ?? [], appliedRef.current, onHighlightClickRef)
         void book.loaded.navigation
           .then((nav: { toc: Parameters<typeof flattenToc>[0] }) => { onTocRef.current(flattenToc(nav.toc)) })
