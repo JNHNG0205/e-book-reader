@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 import type { Book } from '@shared/types'
@@ -54,4 +54,31 @@ test('clicking the cover still calls onOpen', async () => {
   expect(img).not.toBeNull()
   await userEvent.click(img as Element)
   expect(onOpen).toHaveBeenCalledWith('b1')
+})
+
+test('clicking Rename opens the rename dialog and Save calls onRename', async () => {
+  const onRename = vi.fn()
+  render(
+    <BookCard book={book} coverUrl={null} onOpen={vi.fn()} onRename={onRename} onDelete={vi.fn()} />,
+  )
+  await userEvent.click(screen.getByText('Rename'))
+  const input = screen.getByRole('textbox')
+  expect(input).toHaveValue('Dune')
+  await userEvent.clear(input)
+  await userEvent.type(input, 'Dune (revised)')
+  await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+  expect(onRename).toHaveBeenCalledWith('b1', 'Dune (revised)')
+})
+
+test('clicking Delete opens the confirm dialog and Confirm calls onDelete', async () => {
+  const onDelete = vi.fn()
+  render(
+    <BookCard book={book} coverUrl={null} onOpen={vi.fn()} onRename={vi.fn()} onDelete={onDelete} />,
+  )
+  await userEvent.click(screen.getByText('Delete'))
+  const dialog = screen.getByRole('dialog')
+  expect(dialog).toBeInTheDocument()
+  const { getByRole } = within(dialog)
+  await userEvent.click(getByRole('button', { name: 'Delete' }))
+  expect(onDelete).toHaveBeenCalledWith('b1')
 })

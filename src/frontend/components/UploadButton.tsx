@@ -14,8 +14,10 @@ function stripExtension(filename: string): string {
 
 export function UploadButton({
   onUpload,
+  onReject,
 }: {
   onUpload: (file: File, meta: { title: string; format: BookFormat }) => void
+  onReject?: (message: string) => void
 }) {
   async function onChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -23,7 +25,7 @@ export function UploadButton({
     if (!file) return
     const format = inferFormat(file.name)
     if (!format) {
-      window.alert('Only PDF and EPUB files are supported.')
+      onReject?.('Only PDF and EPUB files are supported.')
       return
     }
     onUpload(file, { title: stripExtension(file.name), format })

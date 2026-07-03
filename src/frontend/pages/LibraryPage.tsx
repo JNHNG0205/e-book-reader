@@ -106,7 +106,7 @@ export function LibraryPage() {
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
         <h2 className="text-xl font-semibold">My library</h2>
-        <UploadButton onUpload={handleUpload} />
+        <UploadButton onUpload={handleUpload} onReject={setError} />
       </div>
       {error && <p role="alert" className="text-red-600">{error}</p>}
       {loading ? (

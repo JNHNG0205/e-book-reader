@@ -1,4 +1,7 @@
+import { useState } from 'react'
 import type { Book } from '@shared/types'
+import { RenameDialog } from '@frontend/components/RenameDialog'
+import { ConfirmDialog } from '@frontend/components/ConfirmDialog'
 
 export function BookCard({
   book, coverUrl, onOpen, onRename, onDelete,
@@ -9,6 +12,8 @@ export function BookCard({
   onRename: (id: string, title: string) => void
   onDelete: (id: string) => void
 }) {
+  const [dialog, setDialog] = useState<'none' | 'rename' | 'delete'>('none')
+
   return (
     <div className="flex flex-col rounded border p-3">
       <button
@@ -29,22 +34,40 @@ export function BookCard({
       <div className="mt-2 flex gap-3 text-sm">
         <button
           className="text-blue-600"
-          onClick={() => {
-            const title = window.prompt('New title', book.title)
-            if (title && title !== book.title) onRename(book.id, title)
-          }}
+          onClick={() => setDialog('rename')}
         >
           Rename
         </button>
         <button
           className="text-red-600"
-          onClick={() => {
-            if (window.confirm(`Delete "${book.title}"?`)) onDelete(book.id)
-          }}
+          onClick={() => setDialog('delete')}
         >
           Delete
         </button>
       </div>
+      {dialog === 'rename' && (
+        <RenameDialog
+          initialValue={book.title}
+          onSave={(v) => {
+            if (v !== book.title) onRename(book.id, v)
+            setDialog('none')
+          }}
+          onCancel={() => setDialog('none')}
+        />
+      )}
+      {dialog === 'delete' && (
+        <ConfirmDialog
+          title="Delete book"
+          message={`Delete "${book.title}"? This can't be undone.`}
+          confirmLabel="Delete"
+          danger
+          onConfirm={() => {
+            onDelete(book.id)
+            setDialog('none')
+          }}
+          onCancel={() => setDialog('none')}
+        />
+      )}
     </div>
   )
 }
