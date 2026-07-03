@@ -11,6 +11,9 @@ export interface EpubViewerHandle {
   next: () => void
   prev: () => void
   goTo: (target: string) => void
+  // Clears the native text selection (called once a highlight is created/cancelled, so
+  // the selection stays visible while the color popover is open).
+  clearSelection: () => void
 }
 
 export interface EpubViewerProps {
@@ -265,6 +268,9 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
   const onProgressRef = useRef(onProgress)
   const onSectionRef = useRef(onSection)
   const onSelectRef = useRef(onSelect)
+  // The window of the section where text was last selected, so clearSelection() can
+  // clear it after the color popover is dismissed.
+  const selectionWindowRef = useRef<{ getSelection: () => { removeAllRanges: () => void } | null } | null>(null)
   const onHighlightClickRef = useRef(onHighlightClick)
   const appliedRef = useRef(new Map<string, AppliedAnnotation>())
   const [error, setError] = useState<string | null>(null)
@@ -284,6 +290,7 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
       if (!r) return
       void r.display(resolveTocTarget(bookRef.current, target)).catch(() => { /* target unresolved */ })
     },
+    clearSelection: () => { selectionWindowRef.current?.getSelection()?.removeAllRanges() },
   }), [])
 
   // Create the book + rendition once per file.
@@ -335,8 +342,10 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
           const selection = contents.window.getSelection()
           const text = selection?.toString() ?? ''
           const { x, y } = selectionPosition(contents)
+          // Keep the native selection visible while the color popover is open (so the
+          // user can see what they're highlighting); it's cleared on popover dismiss.
+          selectionWindowRef.current = contents.window
           onSelectRef.current?.({ cfiRange, text, x, y })
-          selection?.removeAllRanges()
         })
         appliedRef.current = new Map<string, AppliedAnnotation>()
         syncAnnotations(rendition, highlights ?? [], appliedRef.current, onHighlightClickRef)

@@ -38,8 +38,9 @@ export function HighlightPopover({
     <div
       ref={ref}
       role="dialog"
-      className="fixed z-50 -translate-x-1/2 rounded-lg border bg-white p-2 shadow-lg"
-      style={{ left: x, top: y }}
+      // Anchored above the selection (translate up) so it doesn't cover the text.
+      className="fixed z-50 -translate-x-1/2 -translate-y-full rounded-lg border bg-white p-2 shadow-lg"
+      style={{ left: x, top: y - 8 }}
     >
       <div className="flex items-center gap-1">
         {HIGHLIGHT_COLORS.map((c) => (

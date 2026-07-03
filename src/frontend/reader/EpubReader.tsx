@@ -76,28 +76,34 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
     [highlights],
   )
 
+  // Close the popover and clear the (still-visible) text selection.
+  function closePopover() {
+    viewerRef.current?.clearSelection()
+    setPopover(null)
+  }
+
   async function createHighlight(color: string) {
     if (!popover?.cfiRange) return
     const saved = await saveHighlight(bookId, { color, anchor: { cfiRange: popover.cfiRange, text: popover.text ?? '' } })
     setHighlights((prev) => [...prev, saved])
-    setPopover(null)
+    closePopover()
   }
   async function changeColor(color: string) {
     if (!popover?.id) return
     await updateHighlight(popover.id, { color })
     setHighlights((prev) => prev.map((h) => (h.id === popover.id ? { ...h, color } : h)))
-    setPopover(null)
+    closePopover()
   }
   async function saveNote(note: string) {
     if (!popover?.id) return
     await updateHighlight(popover.id, { note })
     setHighlights((prev) => prev.map((h) => (h.id === popover.id ? { ...h, note } : h)))
-    setPopover(null)
+    closePopover()
   }
   async function removeHighlight(id: string) {
     await deleteHighlight(id)
     setHighlights((prev) => prev.filter((h) => h.id !== id))
-    setPopover(null)
+    closePopover()
   }
 
   function onRelocated(cfi: string) {
@@ -219,7 +225,7 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
             onPickColor={(c) => { void (popover.mode === 'create' ? createHighlight(c) : changeColor(c)) }}
             onSaveNote={(n) => { void saveNote(n) }}
             onDelete={() => { if (popover.id) void removeHighlight(popover.id) }}
-            onClose={() => setPopover(null)}
+            onClose={closePopover}
           />
         )}
       </div>
