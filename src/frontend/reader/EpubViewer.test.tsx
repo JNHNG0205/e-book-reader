@@ -297,6 +297,21 @@ test('applies saved highlights as annotations', async () => {
   )
 })
 
+test('highlight click positions the popover from the clicked mark rect', async () => {
+  const onHighlightClick = vi.fn()
+  render(
+    <EpubViewer fileUrl="https://x/y.epub"
+      highlights={[{ id: 'h1', cfiRange: 'epubcfi(range1)', color: 'yellow' }]}
+      fontSize={100} theme="light" onRelocated={() => {}} onToc={() => {}}
+      onHighlightClick={onHighlightClick} />,
+  )
+  await vi.waitFor(() => expect(rendition.annotations.add).toHaveBeenCalled())
+  // Grab the click callback epub.js was given (4th arg) and fire it with a fake mark.
+  const cb = rendition.annotations.add.mock.calls[0][3] as (e: unknown) => void
+  cb({ target: { getBoundingClientRect: () => ({ left: 100, top: 200, width: 40, height: 10 }) } })
+  expect(onHighlightClick).toHaveBeenCalledWith('h1', 120, 200) // left + width/2, top
+})
+
 test('reports a text selection on mouseup via onSelect', async () => {
   const onSelect = vi.fn()
   // A real jsdom document (so addEventListener/dispatchEvent work) + a fake window

@@ -286,7 +286,7 @@ function syncAnnotations(
   const annotations = rendition.annotations as unknown as {
     add: (
       type: string, cfiRange: string, data: unknown,
-      cb: (e?: { clientX?: number; clientY?: number }) => void,
+      cb: (e?: { target?: { getBoundingClientRect?: () => DOMRect } }) => void,
       className: string, styles: Record<string, string>,
     ) => void
     remove: (cfiRange: string, type: string) => void
@@ -303,8 +303,14 @@ function syncAnnotations(
     if (prev) annotations.remove(prev.cfiRange, 'highlight')
     annotations.add(
       'highlight', h.cfiRange, { id: h.id },
-      // epub.js calls this with the click event; use its viewport coords for the popover.
-      (e) => onHighlightClick.current?.(h.id, e?.clientX ?? 0, e?.clientY ?? 0),
+      // marks-pane dispatches a CLONED event whose clientX/clientY are lost (0), so we
+      // position the edit popover from the clicked mark element's own rectangle instead.
+      (e) => {
+        const rect = e?.target?.getBoundingClientRect?.()
+        const x = rect ? rect.left + rect.width / 2 : 0
+        const y = rect ? rect.top : 0
+        onHighlightClick.current?.(h.id, x, y)
+      },
       `hl-${h.id}`, { fill: colorValue(h.color), 'fill-opacity': '0.35', 'mix-blend-mode': 'multiply' },
     )
     applied.set(h.id, { cfiRange: h.cfiRange, color: h.color })
