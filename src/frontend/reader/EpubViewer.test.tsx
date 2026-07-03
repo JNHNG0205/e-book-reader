@@ -33,6 +33,7 @@ const { rendition, book: _book, ePub, relocatedHandlers, contentHandlers } = vi.
       generate: vi.fn().mockResolvedValue([]),
       length: vi.fn(() => 100),
       locationFromCfi: vi.fn(() => 11),
+      percentageFromCfi: vi.fn(() => 0.42),
       save: vi.fn(() => '["loc1","loc2"]'),
       load: vi.fn(),
     },
@@ -133,7 +134,7 @@ test('reports progress once locations generate', async () => {
       fontSize={100} theme="light" onRelocated={() => {}} onToc={() => {}} onProgress={onProgress} />,
   )
   await vi.waitFor(() => {
-    expect(onProgress).toHaveBeenCalledWith({ current: 12, total: 100 })
+    expect(onProgress).toHaveBeenCalledWith({ percent: 42 })
   })
 })
 

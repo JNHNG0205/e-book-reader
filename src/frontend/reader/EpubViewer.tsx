@@ -20,7 +20,7 @@ export interface EpubViewerProps {
   theme: EpubTheme
   onRelocated: (cfi: string) => void
   onToc: (toc: TocItem[]) => void
-  onProgress?: (p: { current: number; total: number }) => void
+  onProgress?: (p: { percent: number }) => void
 }
 
 // Generating epub.js "locations" (the index behind the "X / Y" progress count) is slow
@@ -140,17 +140,18 @@ async function fixArchivedImages(book: ReturnType<typeof ePub>, doc: Document): 
 // epub.js's published types claim `locationFromCfi` returns a `Location` object, but at
 // runtime it returns a 0-based location index (number). We report it as a 1-based
 // "page" number so it reads naturally as "current / total".
+// EPUB has no fixed pages; the location index jumps by a variable amount per screen,
+// so we report a smooth reading percentage (0–100) instead — like a real e-reader.
 function reportProgressForCfi(
   book: ReturnType<typeof ePub>,
   cfi: string,
-  onProgressRef: { current?: (p: { current: number; total: number }) => void },
+  onProgressRef: { current?: (p: { percent: number }) => void },
 ) {
   if (!onProgressRef.current) return
-  const total = book.locations.length()
-  if (!total) return
-  const index = book.locations.locationFromCfi(cfi) as unknown as number
-  if (typeof index !== 'number' || Number.isNaN(index)) return
-  onProgressRef.current({ current: index + 1, total })
+  if (!book.locations.length()) return
+  const fraction = book.locations.percentageFromCfi(cfi) as unknown as number
+  if (typeof fraction !== 'number' || Number.isNaN(fraction)) return
+  onProgressRef.current({ percent: Math.round(fraction * 100) })
 }
 
 export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function EpubViewer(

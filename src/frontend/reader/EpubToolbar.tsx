@@ -3,8 +3,7 @@ import type { EpubTheme } from './EpubViewer'
 export interface EpubToolbarProps {
   fontSize: number
   theme: EpubTheme
-  current: number
-  total: number
+  percent: number | null
   onPrev: () => void
   onNext: () => void
   onFontSmaller: () => void
@@ -16,7 +15,7 @@ export interface EpubToolbarProps {
 }
 
 export function EpubToolbar({
-  fontSize, theme, current, total, onPrev, onNext, onFontSmaller, onFontLarger,
+  fontSize, theme, percent, onPrev, onNext, onFontSmaller, onFontLarger,
   onCycleTheme, onToggleToc, onBack, onAddBookmark,
 }: EpubToolbarProps) {
   return (
@@ -28,9 +27,9 @@ export function EpubToolbar({
       </div>
       <div className="flex items-center gap-2">
         <button type="button" aria-label="Previous" onClick={onPrev} className="rounded border px-2 py-1">‹</button>
-        {total > 0
-          ? <span className="text-gray-500">{current} / {total}</span>
-          : <span className="text-gray-400" title="Calculating pages…">…</span>}
+        {percent !== null
+          ? <span className="text-gray-500">{percent}%</span>
+          : <span className="text-gray-400" title="Calculating progress…">…</span>}
         <button type="button" aria-label="Next" onClick={onNext} className="rounded border px-2 py-1">›</button>
       </div>
       <div className="flex items-center gap-2">
