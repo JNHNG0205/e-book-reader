@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { getProgress, saveProgress } from '@backend/data/progress'
-import { listBookmarks, saveBookmark, deleteBookmark } from '@backend/data/bookmarks'
-import { listHighlights, saveHighlight, updateHighlight, deleteHighlight } from '@backend/data/highlights'
+import {
+  getProgress, saveProgress,
+  listBookmarks, saveBookmark, deleteBookmark,
+  listHighlights, saveHighlight, updateHighlight, deleteHighlight,
+} from '@frontend/offline/offlineData'
 import { EpubViewer, type EpubViewerHandle, type EpubTheme } from './EpubViewer'
 import { EpubToolbar } from './EpubToolbar'
 import { TocPanel } from './TocPanel'
@@ -92,18 +94,18 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
   }
   async function changeColor(color: string) {
     if (!popover?.id) return
-    await updateHighlight(popover.id, { color })
+    await updateHighlight(bookId, popover.id, { color })
     setHighlights((prev) => prev.map((h) => (h.id === popover.id ? { ...h, color } : h)))
     closePopover()
   }
   async function saveNote(note: string) {
     if (!popover?.id) return
-    await updateHighlight(popover.id, { note })
+    await updateHighlight(bookId, popover.id, { note })
     setHighlights((prev) => prev.map((h) => (h.id === popover.id ? { ...h, note } : h)))
     closePopover()
   }
   async function removeHighlight(id: string) {
-    await deleteHighlight(id)
+    await deleteHighlight(bookId, id)
     setHighlights((prev) => prev.filter((h) => h.id !== id))
     closePopover()
   }
@@ -134,7 +136,7 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
     if (!activeLocation) return
     const existing = bookmarks.find((b) => b.location === activeLocation)
     if (existing) {
-      await deleteBookmark(existing.id)
+      await deleteBookmark(bookId, existing.id)
       setBookmarks((prev) => prev.filter((b) => b.id !== existing.id))
     } else {
       const label = progress ? `Page ${progress.current}` : 'Bookmark'
@@ -143,7 +145,7 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
     }
   }
   async function removeBookmark(id: string) {
-    await deleteBookmark(id)
+    await deleteBookmark(bookId, id)
     setBookmarks((prev) => prev.filter((b) => b.id !== id))
   }
 

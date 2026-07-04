@@ -3,9 +3,11 @@ import { useNavigate, useParams } from 'react-router-dom'
 import type { Book, Bookmark, Highlight } from '@shared/types'
 import { getBook } from '@backend/data/books'
 import { loadBookObjectUrl } from '@frontend/offline/loadBook'
-import { getProgress, saveProgress } from '@backend/data/progress'
-import { listBookmarks, saveBookmark, deleteBookmark } from '@backend/data/bookmarks'
-import { listHighlights, saveHighlight, updateHighlight, deleteHighlight } from '@backend/data/highlights'
+import {
+  getProgress, saveProgress,
+  listBookmarks, saveBookmark, deleteBookmark,
+  listHighlights, saveHighlight, updateHighlight, deleteHighlight,
+} from '@frontend/offline/offlineData'
 import { PdfViewer } from '@frontend/reader/PdfViewer'
 import { ReaderToolbar } from '@frontend/reader/ReaderToolbar'
 import { EpubReader } from '@frontend/reader/EpubReader'
@@ -113,7 +115,7 @@ export function ReaderPage() {
   async function toggleBookmark() {
     const existing = bookmarks.find((b) => b.location === activeLocation)
     if (existing) {
-      await deleteBookmark(existing.id)
+      await deleteBookmark(book!.id, existing.id)
       setBookmarks((prev) => prev.filter((b) => b.id !== existing.id))
     } else {
       const bm = await saveBookmark(book!.id, { location: activeLocation, label: `Page ${page}` })
@@ -121,7 +123,7 @@ export function ReaderPage() {
     }
   }
   async function removeBookmark(id: string) {
-    await deleteBookmark(id)
+    await deleteBookmark(book!.id, id)
     setBookmarks((prev) => prev.filter((b) => b.id !== id))
   }
   function jumpToBookmark(location: string) {
@@ -149,18 +151,18 @@ export function ReaderPage() {
   }
   async function changeColor(color: string) {
     if (!popover?.id) return
-    await updateHighlight(popover.id, { color })
+    await updateHighlight(book!.id, popover.id, { color })
     setHighlights((prev) => prev.map((h) => (h.id === popover.id ? { ...h, color } : h)))
     closePopover()
   }
   async function saveNote(note: string) {
     if (!popover?.id) return
-    await updateHighlight(popover.id, { note })
+    await updateHighlight(book!.id, popover.id, { note })
     setHighlights((prev) => prev.map((h) => (h.id === popover.id ? { ...h, note } : h)))
     closePopover()
   }
   async function removeHighlight(id: string) {
-    await deleteHighlight(id)
+    await deleteHighlight(book!.id, id)
     setHighlights((prev) => prev.filter((h) => h.id !== id))
     closePopover()
   }

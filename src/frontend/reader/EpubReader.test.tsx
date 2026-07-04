@@ -17,18 +17,16 @@ vi.mock('./EpubViewer', () => ({
     return <div data-testid="epub-viewer" />
   },
 }))
-const { getProgress, saveProgress } = vi.hoisted(() => ({
+const { getProgress, saveProgress, listBookmarks, saveBookmark, deleteBookmark,
+  listHighlights, saveHighlight, updateHighlight, deleteHighlight } = vi.hoisted(() => ({
   getProgress: vi.fn(), saveProgress: vi.fn(),
-}))
-vi.mock('@backend/data/progress', () => ({ getProgress, saveProgress }))
-const { listBookmarks, saveBookmark, deleteBookmark } = vi.hoisted(() => ({
   listBookmarks: vi.fn(), saveBookmark: vi.fn(), deleteBookmark: vi.fn(),
-}))
-vi.mock('@backend/data/bookmarks', () => ({ listBookmarks, saveBookmark, deleteBookmark }))
-const { listHighlights, saveHighlight, updateHighlight, deleteHighlight } = vi.hoisted(() => ({
   listHighlights: vi.fn(), saveHighlight: vi.fn(), updateHighlight: vi.fn(), deleteHighlight: vi.fn(),
 }))
-vi.mock('@backend/data/highlights', () => ({ listHighlights, saveHighlight, updateHighlight, deleteHighlight }))
+vi.mock('@frontend/offline/offlineData', () => ({
+  getProgress, saveProgress, listBookmarks, saveBookmark, deleteBookmark,
+  listHighlights, saveHighlight, updateHighlight, deleteHighlight,
+}))
 
 import { EpubReader } from './EpubReader'
 
@@ -135,7 +133,7 @@ test('shows a filled star and removes the bookmark when the current cfi is alrea
   await act(async () => { render(<EpubReader bookId="b1" fileUrl="https://x/y.epub" onBack={() => {}} />) })
   act(() => { (viewerProps.current?.onRelocated as (c: string) => void)('epubcfi(/6/14!/2)') })
   await userEvent.click(screen.getByRole('button', { name: 'Remove bookmark' }))
-  await waitFor(() => expect(deleteBookmark).toHaveBeenCalledWith('bm1'))
+  await waitFor(() => expect(deleteBookmark).toHaveBeenCalledWith('b1', 'bm1'))
 })
 
 test('shows bookmarks in the sidebar and jumps via goTo', async () => {
@@ -157,6 +155,28 @@ test('creates a highlight from a selection', async () => {
   await waitFor(() => expect(saveHighlight).toHaveBeenCalledWith('b1', expect.objectContaining({
     color: 'yellow', anchor: expect.objectContaining({ cfiRange: 'epubcfi(sel)', text: 'hi' }),
   })))
+})
+
+test('creating a highlight while offline still shows up in the UI (facade resolves from the local cache/outbox)', async () => {
+  const originalOnLine = Object.getOwnPropertyDescriptor(window.navigator, 'onLine')
+  Object.defineProperty(window.navigator, 'onLine', { configurable: true, value: false })
+  try {
+    // Mirrors what the real offlineData facade does offline: saveHighlight writes to the
+    // local cache + outbox and resolves the row immediately, without reaching the network.
+    saveHighlight.mockResolvedValue({
+      id: 'h-offline', color: 'blue', anchor: { cfiRange: 'epubcfi(off)', text: 'offline text' },
+      note: null, user_id: 'u1', book_id: 'b1', created_at: '', updated_at: '',
+    })
+    await act(async () => { render(<EpubReader bookId="b1" fileUrl="https://x/y.epub" onBack={() => {}} />) })
+    act(() => { (viewerProps.current?.onSelect as (s: unknown) => void)({ cfiRange: 'epubcfi(off)', text: 'offline text', x: 20, y: 20 }) })
+    await userEvent.click(await screen.findByRole('button', { name: /blue/i }))
+    await waitFor(() => expect(saveHighlight).toHaveBeenCalledWith('b1', expect.objectContaining({ color: 'blue' })))
+    await userEvent.click(screen.getByRole('button', { name: /menu/i }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Highlights' }))
+    expect(await screen.findByText(/offline text/)).toBeInTheDocument()
+  } finally {
+    if (originalOnLine) Object.defineProperty(window.navigator, 'onLine', originalOnLine)
+  }
 })
 
 test('shows highlights in the Highlights tab and jumps', async () => {

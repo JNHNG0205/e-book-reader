@@ -7,18 +7,16 @@ const { getBook } = vi.hoisted(() => ({ getBook: vi.fn() }))
 vi.mock('@backend/data/books', () => ({ getBook }))
 const { loadBookObjectUrl } = vi.hoisted(() => ({ loadBookObjectUrl: vi.fn() }))
 vi.mock('@frontend/offline/loadBook', () => ({ loadBookObjectUrl }))
-const { getProgress, saveProgress } = vi.hoisted(() => ({
+const { getProgress, saveProgress, listBookmarks, saveBookmark, deleteBookmark,
+  listHighlights, saveHighlight, updateHighlight, deleteHighlight } = vi.hoisted(() => ({
   getProgress: vi.fn(), saveProgress: vi.fn(),
-}))
-vi.mock('@backend/data/progress', () => ({ getProgress, saveProgress }))
-const { listBookmarks, saveBookmark, deleteBookmark } = vi.hoisted(() => ({
   listBookmarks: vi.fn(), saveBookmark: vi.fn(), deleteBookmark: vi.fn(),
-}))
-vi.mock('@backend/data/bookmarks', () => ({ listBookmarks, saveBookmark, deleteBookmark }))
-const { listHighlights, saveHighlight, updateHighlight, deleteHighlight } = vi.hoisted(() => ({
   listHighlights: vi.fn(), saveHighlight: vi.fn(), updateHighlight: vi.fn(), deleteHighlight: vi.fn(),
 }))
-vi.mock('@backend/data/highlights', () => ({ listHighlights, saveHighlight, updateHighlight, deleteHighlight }))
+vi.mock('@frontend/offline/offlineData', () => ({
+  getProgress, saveProgress, listBookmarks, saveBookmark, deleteBookmark,
+  listHighlights, saveHighlight, updateHighlight, deleteHighlight,
+}))
 // Capture the props ReaderPage passes to the (mocked) PdfViewer, and expose a way to
 // drive its callbacks, mirroring how EpubReader.test exposes viewerProps.
 const { pdfProps } = vi.hoisted(() => ({ pdfProps: { current: null as Record<string, unknown> | null } }))
@@ -141,6 +139,31 @@ test('creates a PDF highlight from a selection on the current page', async () =>
     color: 'yellow',
     anchor: expect.objectContaining({ page: 1, text: 'hi' }),
   })))
+})
+
+test('creating a PDF highlight while offline still shows up in the UI (facade resolves from the local cache/outbox)', async () => {
+  const originalOnLine = Object.getOwnPropertyDescriptor(window.navigator, 'onLine')
+  Object.defineProperty(window.navigator, 'onLine', { configurable: true, value: false })
+  try {
+    // Mirrors what the real offlineData facade does offline: saveHighlight writes to the
+    // local cache + outbox and resolves the row immediately, without reaching the network.
+    saveHighlight.mockResolvedValue({
+      id: 'h-offline', color: 'blue', note: null,
+      anchor: { page: 1, rects: [{ x: 0, y: 0, w: 0.5, h: 0.05 }], text: 'offline text' },
+      user_id: 'u1', book_id: 'b1', created_at: '', updated_at: '',
+    })
+    renderAt('b1')
+    await screen.findByTestId('pdf-page')
+    act(() => { (pdfProps.current?.onSelect as (s: unknown) => void)(
+      { rects: [{ x: 0, y: 0, w: 0.5, h: 0.05 }], text: 'offline text', x: 20, y: 20 }) })
+    await userEvent.click(await screen.findByRole('button', { name: /blue/i }))
+    await waitFor(() => expect(saveHighlight).toHaveBeenCalledWith('b1', expect.objectContaining({ color: 'blue' })))
+    await userEvent.click(screen.getByRole('button', { name: /menu/i }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Highlights' }))
+    expect(await screen.findByText(/offline text/)).toBeInTheDocument()
+  } finally {
+    if (originalOnLine) Object.defineProperty(window.navigator, 'onLine', originalOnLine)
+  }
 })
 
 test('shows PDF highlights in the Highlights tab and jumps to the page', async () => {
