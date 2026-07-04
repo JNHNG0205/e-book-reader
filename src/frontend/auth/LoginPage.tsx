@@ -63,70 +63,73 @@ export function LoginPage() {
 
   if (sent) {
     return (
-      <div className="mx-auto mt-24 max-w-sm p-6">
-        <h1 className="mb-4 text-2xl font-bold">Check your email</h1>
-        <p className="mb-6 text-sm">
-          We sent a confirmation link to <strong>{sentEmail}</strong>. Click it to activate your
-          account, then log in.
-        </p>
-        {error && <p role="alert" className="mb-4 text-sm text-red-600">{error}</p>}
-        {resendMessage && <p className="mb-4 text-sm text-green-600">{resendMessage}</p>}
-        <button
-          type="button"
-          onClick={onResend}
-          disabled={resending}
-          className="mb-2 w-full rounded border py-2 text-sm disabled:opacity-50"
-        >
-          Resend
-        </button>
-        <button
-          type="button"
-          onClick={onBackToLogin}
-          className="mt-2 text-sm text-blue-600"
-        >
-          Back to log in
-        </button>
+      <div className="flex min-h-screen items-center justify-center bg-paper p-6">
+        <div className="w-full max-w-sm rounded-xl border border-line bg-paper-raised p-8 shadow-[0_24px_60px_-30px_rgba(27,26,23,0.5)]">
+          <h1 className="mb-4 font-serif text-2xl font-semibold tracking-[-0.01em] text-ink">Check your email</h1>
+          <p className="mb-6 text-sm leading-relaxed text-ink-soft">
+            We sent a confirmation link to <strong className="text-ink">{sentEmail}</strong>. Click it to
+            activate your account, then log in.
+          </p>
+          {error && <p role="alert" className="mb-4 text-sm text-red-700">{error}</p>}
+          {resendMessage && <p className="mb-4 text-sm text-green-700">{resendMessage}</p>}
+          <button
+            type="button"
+            onClick={onResend}
+            disabled={resending}
+            className="mb-2 w-full rounded-lg border border-line py-2 text-sm font-medium text-ink hover:bg-line-soft disabled:opacity-50"
+          >
+            Resend
+          </button>
+          <button type="button" onClick={onBackToLogin} className="mt-2 text-sm font-medium text-accent hover:text-accent-deep">
+            Back to log in
+          </button>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="mx-auto mt-24 max-w-sm p-6">
-      <h1 className="mb-6 text-2xl font-bold">
-        {mode === 'login' ? 'Log in' : 'Sign up'}
-      </h1>
-      <form onSubmit={onSubmit} className="space-y-4">
-        <label className="block">
-          <span className="text-sm">Email</span>
-          <input
-            type="email" required value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full rounded border px-3 py-2"
-          />
-        </label>
-        <label className="block">
-          <span className="text-sm">Password</span>
-          <input
-            type="password" required minLength={6} value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 w-full rounded border px-3 py-2"
-          />
-        </label>
-        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+    <div className="flex min-h-screen items-center justify-center bg-paper p-6">
+      <div className="w-full max-w-sm rounded-xl border border-line bg-paper-raised p-8 shadow-[0_24px_60px_-30px_rgba(27,26,23,0.5)]">
+        <div className="mb-1 font-serif text-lg font-semibold tracking-[-0.01em] text-ink">
+          E-Book <span className="text-accent">Reader</span>
+        </div>
+        <h1 className="mb-6 text-sm text-ink-soft">
+          {mode === 'login' ? 'Log in to your library.' : 'Create your library.'}
+        </h1>
+        <form onSubmit={onSubmit} className="space-y-4">
+          <label className="block">
+            <span className="u-label">Email</span>
+            <input
+              type="email" required value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="mt-1.5 w-full rounded-lg border border-line bg-paper px-3 py-2 text-ink focus:border-accent focus:outline-none"
+            />
+          </label>
+          <label className="block">
+            <span className="u-label">Password</span>
+            <input
+              type="password" required minLength={6} value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="mt-1.5 w-full rounded-lg border border-line bg-paper px-3 py-2 text-ink focus:border-accent focus:outline-none"
+            />
+          </label>
+          {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+          <button
+            type="submit" disabled={busy}
+            className="w-full rounded-lg bg-accent py-2 font-semibold text-white hover:bg-accent-deep disabled:opacity-50"
+          >
+            {mode === 'login' ? 'Log in' : 'Sign up'}
+          </button>
+        </form>
         <button
-          type="submit" disabled={busy}
-          className="w-full rounded bg-black py-2 text-white disabled:opacity-50"
+          type="button"
+          onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
+          className="mt-4 text-sm font-medium text-accent hover:text-accent-deep"
         >
-          {mode === 'login' ? 'Log in' : 'Sign up'}
+          {mode === 'login' ? 'Need an account? Sign up' : 'Have an account? Log in'}
         </button>
-      </form>
-      <button
-        type="button"
-        onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
-        className="mt-4 text-sm text-blue-600"
-      >
-        {mode === 'login' ? 'Need an account? Sign up' : 'Have an account? Log in'}
-      </button>
+      </div>
     </div>
   )
 }

@@ -154,21 +154,31 @@ export function LibraryPage() {
   }
 
   return (
-    <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-xl font-semibold">My library</h2>
+    <div className="mx-auto max-w-6xl px-6 py-10">
+      <div className="mb-8 flex items-end justify-between gap-4 border-b border-line pb-6">
+        <div>
+          <div className="u-label mb-1.5">Your shelf</div>
+          <h2 className="font-serif text-2xl font-semibold tracking-[-0.01em] text-ink">Library</h2>
+        </div>
         <UploadButton onUpload={handleUpload} onReject={setError} />
       </div>
-      {error && <p role="alert" className="text-red-600">{error}</p>}
+
+      {error && <p role="alert" className="mb-4 text-sm text-red-700">{error}</p>}
       {offline && (
-        <p className="mb-4 text-sm text-gray-500">Offline — showing your saved library</p>
+        <p className="mb-5 inline-flex items-center gap-2 rounded-md bg-line-soft px-3 py-1.5 text-sm text-ink-soft">
+          Offline — showing your saved library
+        </p>
       )}
+
       {loading ? (
-        <p>Loading…</p>
+        <p className="text-ink-soft">Loading…</p>
       ) : books.length === 0 ? (
-        <p className="text-gray-500">No books yet — add your first PDF or EPUB.</p>
+        <div className="rounded-lg border border-dashed border-line py-20 text-center">
+          <p className="font-serif text-lg text-ink">Your shelf is empty.</p>
+          <p className="mt-1 text-sm text-ink-soft">Add your first PDF or EPUB to start reading.</p>
+        </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {books.map((b) => (
             <BookCard
               key={b.id}

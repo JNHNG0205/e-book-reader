@@ -7,9 +7,19 @@ export function BookmarkStar({ active, onToggle }: { active: boolean; onToggle: 
       aria-label={label}
       title={label}
       onClick={onToggle}
-      className={`text-2xl leading-none ${active ? 'text-yellow-500' : 'text-gray-400 hover:text-gray-600'}`}
+      className={`grid h-9 w-9 place-items-center rounded-md border border-line bg-paper-raised/90 shadow-sm backdrop-blur-sm transition-colors ${
+        active ? 'text-accent' : 'text-ink-faint hover:text-ink-soft'
+      }`}
     >
-      {active ? '★' : '☆'}
+      <svg
+        viewBox="0 0 24 24"
+        fill={active ? 'currentColor' : 'none'}
+        stroke="currentColor"
+        strokeWidth={1.7}
+        className="h-5 w-5"
+      >
+        <path d="M6 3h12v18l-6-4-6 4V3z" />
+      </svg>
     </button>
   )
 }

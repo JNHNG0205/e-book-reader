@@ -26,9 +26,9 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="w-full max-w-sm rounded-lg bg-white p-5 shadow-xl"
+        className="w-full max-w-sm rounded-xl border border-line bg-paper-raised p-5 shadow-[0_24px_60px_-24px_rgba(27,26,23,0.6)]"
       >
-        <h3 className="mb-3 text-lg font-semibold">{title}</h3>
+        <h3 className="mb-3 font-serif text-lg font-semibold tracking-[-0.01em] text-ink">{title}</h3>
         {children}
       </div>
     </div>

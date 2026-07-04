@@ -25,7 +25,7 @@ const MAX_FONT = 200
 // Background for the area around the reading column, matched to the theme so the
 // letterbox on wide screens blends with the page instead of showing a bright frame.
 const AREA_BG: Record<EpubTheme, string> = {
-  light: 'bg-gray-100',
+  light: 'bg-[#efece4]',
   dark: 'bg-neutral-900',
   sepia: 'bg-[#efe6d2]',
 }
@@ -162,7 +162,7 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
   const larger = () => setFontSize((f) => Math.min(MAX_FONT, f + 10))
   const cycleTheme = () => setTheme((t) => THEMES[(THEMES.indexOf(t) + 1) % THEMES.length])
 
-  if (!ready) return <div className="p-8 text-gray-500">Loading…</div>
+  if (!ready) return <div className="p-8 text-ink-soft">Loading…</div>
 
   return (
     <div className="flex h-full w-full flex-col">
@@ -181,7 +181,7 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
             type="button"
             aria-label="Menu"
             onClick={() => setTocOpen(true)}
-            className="absolute left-3 top-3 z-10 rounded-md border bg-white/90 p-1.5 text-gray-700 shadow-sm hover:bg-white"
+            className="absolute left-3 top-3 z-10 rounded-md border border-line bg-paper-raised/90 p-1.5 text-ink-soft shadow-sm backdrop-blur-sm hover:bg-paper-raised"
           >
             <PanelIcon className="h-5 w-5" />
           </button>

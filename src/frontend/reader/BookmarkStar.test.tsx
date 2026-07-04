@@ -3,18 +3,20 @@ import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 import { BookmarkStar } from './BookmarkStar'
 
-test('renders an outline star and "Add bookmark" label when inactive', () => {
-  render(<BookmarkStar active={false} onToggle={() => {}} />)
+test('renders an outline bookmark and "Add bookmark" label when inactive', () => {
+  const { container } = render(<BookmarkStar active={false} onToggle={() => {}} />)
   const button = screen.getByRole('button', { name: 'Add bookmark' })
-  expect(button).toHaveTextContent('☆')
   expect(button).toHaveAttribute('aria-pressed', 'false')
+  // Outline: the icon is not filled.
+  expect(container.querySelector('svg')).toHaveAttribute('fill', 'none')
 })
 
-test('renders a filled star and "Remove bookmark" label when active', () => {
-  render(<BookmarkStar active={true} onToggle={() => {}} />)
+test('renders a filled bookmark and "Remove bookmark" label when active', () => {
+  const { container } = render(<BookmarkStar active={true} onToggle={() => {}} />)
   const button = screen.getByRole('button', { name: 'Remove bookmark' })
-  expect(button).toHaveTextContent('★')
   expect(button).toHaveAttribute('aria-pressed', 'true')
+  // Active: the icon is filled with currentColor.
+  expect(container.querySelector('svg')).toHaveAttribute('fill', 'currentColor')
 })
 
 test('calls onToggle when clicked', async () => {

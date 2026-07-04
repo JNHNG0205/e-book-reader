@@ -169,7 +169,7 @@ export function ReaderPage() {
   }
 
   if (error) return <div className="p-6 text-red-600" role="alert">{error}</div>
-  if (!book) return <div className="p-6">Loading…</div>
+  if (!book) return <div className="p-6 text-ink-soft">Loading…</div>
 
   return (
     <div className="flex h-[calc(100vh-49px)] flex-col">
@@ -179,7 +179,7 @@ export function ReaderPage() {
           onPrev={prev} onNext={next} onZoomIn={zoomIn} onZoomOut={zoomOut} onBack={goBack}
         />
       )}
-      <div className="flex flex-1 justify-center overflow-auto bg-gray-100">
+      <div className="flex flex-1 justify-center overflow-auto bg-[#efece4]">
         {book.format === 'pdf' && fileUrl ? (
           <>
             {sidebarOpen && (
@@ -208,7 +208,7 @@ export function ReaderPage() {
                   type="button"
                   aria-label="Menu"
                   onClick={() => setSidebarOpen(true)}
-                  className="absolute left-3 top-3 z-10 rounded-md border bg-white/90 p-1.5 text-gray-700 shadow-sm hover:bg-white"
+                  className="absolute left-3 top-3 z-10 rounded-md border border-line bg-paper-raised/90 p-1.5 text-ink-soft shadow-sm backdrop-blur-sm hover:bg-paper-raised"
                 >
                   <PanelIcon className="h-5 w-5" />
                 </button>

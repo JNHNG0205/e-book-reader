@@ -30,6 +30,6 @@ test('highlights the item matching activeHref', () => {
   render(<TocPanel items={items} onNavigate={() => {}} activeHref="c1.xhtml#s1" />)
   const active = screen.getByRole('button', { name: 'Section 1.1' })
   const inactive = screen.getByRole('button', { name: 'Chapter 1' })
-  expect(active.className).toMatch(/bg-blue-100/)
-  expect(inactive.className).not.toMatch(/bg-blue-100/)
+  expect(active.className).toMatch(/bg-accent-tint/)
+  expect(inactive.className).not.toMatch(/bg-accent-tint/)
 })

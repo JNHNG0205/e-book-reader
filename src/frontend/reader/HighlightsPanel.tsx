@@ -14,11 +14,11 @@ export function HighlightsPanel({
 
   return (
     <div className="text-sm">
-      <div className="flex flex-wrap gap-1 border-b p-2">
+      <div className="flex flex-wrap gap-1 border-b border-line-soft p-2">
         <button
           type="button"
           onClick={() => setFilter(null)}
-          className={`rounded px-2 py-0.5 text-xs ${filter === null ? 'bg-gray-200' : ''}`}
+          className={`rounded px-2 py-0.5 text-xs ${filter === null ? 'bg-line font-medium text-ink' : 'text-ink-soft'}`}
         >
           All
         </button>
@@ -36,26 +36,26 @@ export function HighlightsPanel({
         ))}
       </div>
       {shown.length === 0 ? (
-        <p className="p-3 text-gray-400">No highlights yet.</p>
+        <p className="p-3 text-ink-faint">No highlights yet.</p>
       ) : (
         <ul className="p-2">
           {shown.map((hl) => {
             const text = String((hl.anchor as { text?: string })?.text ?? '')
             return (
-              <li key={hl.id} className="group flex items-start gap-2 rounded px-2 py-1 hover:bg-gray-100">
+              <li key={hl.id} className="group flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-line-soft">
                 <span
                   className="mt-1 h-3 w-3 shrink-0 rounded-full"
                   style={{ backgroundColor: colorValue(hl.color) }}
                 />
-                <button type="button" onClick={() => onJump(hl)} className="flex-1 text-left">
+                <button type="button" onClick={() => onJump(hl)} className="flex-1 text-left text-ink">
                   <span className="line-clamp-2">{text || '(highlight)'}</span>
-                  {hl.note && <span className="mt-0.5 block text-xs text-gray-500">{hl.note}</span>}
+                  {hl.note && <span className="mt-0.5 block text-xs text-ink-soft">{hl.note}</span>}
                 </button>
                 <button
                   type="button"
                   aria-label="Delete highlight"
                   onClick={() => onDelete(hl.id)}
-                  className="text-red-600 opacity-0 group-hover:opacity-100"
+                  className="text-ink-faint opacity-0 hover:text-red-700 group-hover:opacity-100"
                 >
                   ✕
                 </button>

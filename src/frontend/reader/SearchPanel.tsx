@@ -29,38 +29,38 @@ export function SearchPanel({ onSearch, onJump }: SearchPanelProps) {
 
   return (
     <div className="flex flex-col p-2">
-      <form onSubmit={submit} className="flex gap-1">
+      <form onSubmit={submit} className="flex gap-1.5">
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search this book…"
-          className="min-w-0 flex-1 rounded border px-2 py-1 text-sm"
+          className="min-w-0 flex-1 rounded-md border border-line bg-paper px-3 py-1.5 text-sm text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none"
         />
-        <button type="submit" aria-label="Search" className="rounded bg-black px-2 py-1 text-sm text-white">
+        <button type="submit" aria-label="Search" className="rounded-md bg-accent px-3 py-1.5 text-sm font-semibold text-white hover:bg-accent-deep">
           Search
         </button>
       </form>
       <div className="mt-2">
-        {status === 'searching' && <p className="text-sm text-gray-500">Searching…</p>}
-        {status === 'error' && <p className="text-sm text-red-600">Search failed. Try again.</p>}
+        {status === 'searching' && <p className="text-sm text-ink-soft">Searching…</p>}
+        {status === 'error' && <p className="text-sm text-red-700">Search failed. Try again.</p>}
         {status === 'done' && results.length === 0 && (
-          <p className="text-sm text-gray-500">No results.</p>
+          <p className="text-sm text-ink-soft">No results.</p>
         )}
-        {status === 'idle' && <p className="text-sm text-gray-400">Search this book.</p>}
+        {status === 'idle' && <p className="text-sm text-ink-faint">Search this book.</p>}
         {status === 'done' && results.length >= SEARCH_LIMIT && (
-          <p className="mb-1 text-xs text-gray-400">Showing the first {SEARCH_LIMIT} matches.</p>
+          <p className="mb-1 text-xs text-ink-faint">Showing the first {SEARCH_LIMIT} matches.</p>
         )}
-        <ul className="flex flex-col gap-1">
+        <ul className="flex flex-col gap-0.5">
           {results.map((r) => (
             <li key={r.id}>
               <button
                 type="button"
                 onClick={() => onJump(r)}
-                className="w-full rounded px-2 py-1 text-left text-sm hover:bg-gray-100"
+                className="w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-line-soft"
               >
-                {r.label && <span className="mr-1 font-medium text-gray-500">{r.label}</span>}
-                <span className="text-gray-800">{r.excerpt}</span>
+                {r.label && <span className="mr-1.5 font-mono text-xs font-medium text-accent">{r.label}</span>}
+                <span className="text-ink">{r.excerpt}</span>
               </button>
             </li>
           ))}

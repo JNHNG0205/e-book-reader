@@ -1,3 +1,23 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  html {
+    /* The whole app sits on laid paper, in ink. */
+    background-color: theme('colors.paper');
+    color: theme('colors.ink');
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    font-family: theme('fontFamily.sans');
+  }
+
+  /* Uppercase label treatment used across chrome (tabs, eyebrows, tags). */
+  .u-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: theme('colors.ink-faint');
+  }
+}

@@ -39,7 +39,7 @@ export function HighlightPopover({
       ref={ref}
       role="dialog"
       // Anchored above the selection (translate up) so it doesn't cover the text.
-      className="fixed z-50 -translate-x-1/2 -translate-y-full rounded-lg border bg-white p-2 shadow-lg"
+      className="fixed z-50 -translate-x-1/2 -translate-y-full rounded-lg border border-line bg-paper-raised p-2 shadow-[0_12px_32px_-12px_rgba(27,26,23,0.5)]"
       style={{ left: x, top: y - 8 }}
     >
       <div className="flex items-center gap-1">
@@ -49,7 +49,7 @@ export function HighlightPopover({
             type="button"
             aria-label={c.label}
             onClick={() => onPickColor(c.key)}
-            className={`h-6 w-6 rounded-full border ${color === c.key ? 'ring-2 ring-black' : ''}`}
+            className={`h-6 w-6 rounded-full border border-black/10 ${color === c.key ? 'ring-2 ring-accent ring-offset-1' : ''}`}
             style={{ backgroundColor: c.value }}
           />
         ))}
@@ -57,7 +57,7 @@ export function HighlightPopover({
           type="button"
           aria-label="Cancel"
           onClick={onClose}
-          className="ml-1 h-6 w-6 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+          className="ml-1 grid h-6 w-6 place-items-center rounded-full text-ink-faint hover:bg-line-soft hover:text-ink"
         >
           ✕
         </button>
@@ -68,20 +68,20 @@ export function HighlightPopover({
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Add a note…"
-            className="h-16 w-full rounded border p-1 text-sm"
+            className="h-16 w-full rounded-md border border-line bg-paper p-2 text-sm text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none"
           />
-          <div className="mt-1 flex items-center justify-between gap-2">
+          <div className="mt-1.5 flex items-center justify-between gap-2">
             <button
               type="button"
               onClick={() => onDelete?.()}
-              className="whitespace-nowrap rounded border border-red-200 px-2 py-1 text-sm text-red-600 hover:bg-red-50"
+              className="whitespace-nowrap rounded-md border border-red-200 px-2.5 py-1 text-sm text-red-700 hover:bg-red-50"
             >
               Remove highlight
             </button>
             <button
               type="button"
               onClick={() => onSaveNote?.(draft)}
-              className="whitespace-nowrap rounded bg-black px-3 py-1 text-sm text-white"
+              className="whitespace-nowrap rounded-md bg-accent px-3 py-1 text-sm font-semibold text-white hover:bg-accent-deep"
             >
               Save note
             </button>

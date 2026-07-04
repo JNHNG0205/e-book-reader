@@ -32,7 +32,11 @@ export function UploadButton({
   }
 
   return (
-    <label className="cursor-pointer rounded bg-black px-4 py-2 text-sm text-white">
+    <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-deep">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} className="h-4 w-4">
+        <line x1="12" y1="5" x2="12" y2="19" />
+        <line x1="5" y1="12" x2="19" y2="12" />
+      </svg>
       Add book
       <input
         type="file" accept=".pdf,.epub" aria-label="Add book"
