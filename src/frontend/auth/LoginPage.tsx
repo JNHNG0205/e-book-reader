@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { supabase } from '@backend/supabase'
+import { PasswordInput } from '@frontend/components/PasswordInput'
 
 type Mode = 'login' | 'signup' | 'reset'
 
@@ -143,25 +144,21 @@ export function LoginPage() {
           </label>
 
           {mode !== 'reset' && (
-            <label className="block">
-              <span className="u-label">Password</span>
-              <input
-                type="password" required minLength={6} value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className={field}
-              />
-            </label>
+            <PasswordInput
+              label="Password"
+              value={password}
+              onChange={setPassword}
+              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+            />
           )}
 
           {mode === 'signup' && (
-            <label className="block">
-              <span className="u-label">Confirm password</span>
-              <input
-                type="password" required minLength={6} value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                className={field}
-              />
-            </label>
+            <PasswordInput
+              label="Confirm password"
+              value={confirm}
+              onChange={setConfirm}
+              autoComplete="new-password"
+            />
           )}
 
           {mode === 'login' && (

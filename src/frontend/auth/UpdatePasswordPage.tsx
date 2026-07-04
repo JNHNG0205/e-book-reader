@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { supabase } from '@backend/supabase'
+import { PasswordInput } from '@frontend/components/PasswordInput'
 
 // Shown when the user arrives via a password-reset link (a recovery session is active).
 // They set a new password; on success the USER_UPDATED event clears recovery and the app
@@ -37,22 +38,8 @@ export function UpdatePasswordPage() {
           <p className="text-sm text-green-700">Password updated. Taking you to your library…</p>
         ) : (
           <form onSubmit={onSubmit} className="space-y-4">
-            <label className="block">
-              <span className="u-label">New password</span>
-              <input
-                type="password" required minLength={6} value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1.5 w-full rounded-lg border border-line bg-paper px-3 py-2 text-ink focus:border-accent focus:outline-none"
-              />
-            </label>
-            <label className="block">
-              <span className="u-label">Confirm new password</span>
-              <input
-                type="password" required minLength={6} value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                className="mt-1.5 w-full rounded-lg border border-line bg-paper px-3 py-2 text-ink focus:border-accent focus:outline-none"
-              />
-            </label>
+            <PasswordInput label="New password" value={password} onChange={setPassword} autoComplete="new-password" />
+            <PasswordInput label="Confirm new password" value={confirm} onChange={setConfirm} autoComplete="new-password" />
             {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
             <button
               type="submit" disabled={busy}

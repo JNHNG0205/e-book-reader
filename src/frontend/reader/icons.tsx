@@ -16,4 +16,6 @@ export {
   Check as CheckIcon,
   CircleHalf as ThemeIcon,
   Trash as TrashIcon,
+  Eye as EyeIcon,
+  EyeSlash as EyeSlashIcon,
 } from '@phosphor-icons/react'
