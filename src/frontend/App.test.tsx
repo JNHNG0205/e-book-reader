@@ -16,6 +16,9 @@ vi.mock('@frontend/library/coverExtract', () => ({
 vi.mock('@frontend/library/bookMetadata', () => ({
   extractBookMetadata: vi.fn().mockResolvedValue({ title: null, author: null }),
 }))
+vi.mock('@backend/data/progress', () => ({
+  listProgress: vi.fn().mockResolvedValue([]),
+}))
 
 test('renders the app title', () => {
   useSession.mockReturnValue({ session: { user: { id: 'u1' } }, loading: false })

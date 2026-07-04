@@ -31,12 +31,16 @@ vi.mock('@frontend/library/bookMetadata', () => ({ extractBookMetadata }))
 const { cachedBookIds } = vi.hoisted(() => ({ cachedBookIds: vi.fn() }))
 vi.mock('@frontend/offline/bookCache', () => ({ cachedBookIds }))
 
+const { listProgress } = vi.hoisted(() => ({ listProgress: vi.fn() }))
+vi.mock('@backend/data/progress', () => ({ listProgress }))
+
 import { LibraryPage } from './LibraryPage'
 
 beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
   cachedBookIds.mockResolvedValue([])
+  listProgress.mockResolvedValue([])
   listBooks.mockResolvedValue([
     { id: 'b1', title: 'Dune', author: 'Herbert', format: 'pdf', cover_path: null, storage_path: 'books/b1.pdf' },
   ])
@@ -161,6 +165,13 @@ test('does not mark a book offline-available when its id is not cached', async (
   render(<MemoryRouter><LibraryPage /></MemoryRouter>)
   await screen.findByText('Dune')
   expect(screen.queryByText('Offline')).not.toBeInTheDocument()
+})
+
+test('shows each book’s completion percent from listProgress', async () => {
+  listProgress.mockResolvedValue([{ book_id: 'b1', percent: 73 }])
+  render(<MemoryRouter><LibraryPage /></MemoryRouter>)
+  await screen.findByText('Dune')
+  await waitFor(() => expect(screen.getByText('73%')).toBeInTheDocument())
 })
 
 test('when listBooks rejects with no cached list, shows the error instead of a fallback', async () => {

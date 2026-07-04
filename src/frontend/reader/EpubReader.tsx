@@ -110,10 +110,19 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
     closePopover()
   }
 
+  // Latest reported progress, read inside the debounced save so the stored percent matches
+  // the position being saved (onProgress and onRelocated both fire on a relocation).
+  const progressRef = useRef<{ current: number; total: number } | null>(null)
+  useEffect(() => { progressRef.current = progress }, [progress])
+
   function onRelocated(cfi: string) {
     setCurrentCfi(cfi)
     if (saveTimer.current) clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => { void saveProgress(bookId, cfi) }, 500)
+    saveTimer.current = setTimeout(() => {
+      const p = progressRef.current
+      const percent = p && p.total ? Math.round((p.current / p.total) * 100) : null
+      void saveProgress(bookId, cfi, percent)
+    }, 500)
   }
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => () => { if (saveTimer.current) clearTimeout(saveTimer.current) }, [])

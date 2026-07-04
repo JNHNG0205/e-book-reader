@@ -62,7 +62,7 @@ test('dispatches ops to the correct repo fn, in FIFO order, and removes each on 
     op({ opId: 'b', entity: 'highlight', kind: 'delete', rowId: 'h2' }),
     op({ opId: 'c', entity: 'bookmark', kind: 'upsert', rowId: 'b1', payload: { id: 'b1', user_id: 'u1' } }),
     op({ opId: 'd', entity: 'bookmark', kind: 'delete', rowId: 'b2' }),
-    op({ opId: 'e', entity: 'progress', kind: 'upsert', bookId: 'book-9', payload: { location: '42' } }),
+    op({ opId: 'e', entity: 'progress', kind: 'upsert', bookId: 'book-9', payload: { location: '42', percent: 42 } }),
   ]
   allOps.mockResolvedValueOnce(ops) // then default [] ends the drain loop
 
@@ -72,7 +72,7 @@ test('dispatches ops to the correct repo fn, in FIFO order, and removes each on 
   expect(deleteHighlight).toHaveBeenCalledWith('h2')
   expect(upsertBookmark).toHaveBeenCalledWith({ id: 'b1', user_id: 'u1' })
   expect(deleteBookmark).toHaveBeenCalledWith('b2')
-  expect(saveProgress).toHaveBeenCalledWith('book-9', '42')
+  expect(saveProgress).toHaveBeenCalledWith('book-9', '42', 42)
 
   const callOrder = [
     upsertHighlight.mock.invocationCallOrder[0],

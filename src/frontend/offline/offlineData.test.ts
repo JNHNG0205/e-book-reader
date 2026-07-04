@@ -266,13 +266,13 @@ test('getProgress returns null when nothing cached and offline', async () => {
   expect(result).toBeNull()
 })
 
-test('saveProgress upserts a cached progress row and enqueues an upsert', async () => {
-  await saveProgress('book-1', '55')
+test('saveProgress upserts a cached progress row and enqueues an upsert with percent', async () => {
+  await saveProgress('book-1', '55', 60)
 
   expect(upsertCachedRow).toHaveBeenCalledWith(
     'progress',
     'book-1',
-    expect.objectContaining({ id: 'book-1', book_id: 'book-1', location: '55' }),
+    expect.objectContaining({ id: 'book-1', book_id: 'book-1', location: '55', percent: 60 }),
   )
   expect(enqueueOp).toHaveBeenCalledWith(
     expect.objectContaining({
@@ -280,7 +280,7 @@ test('saveProgress upserts a cached progress row and enqueues an upsert', async 
       kind: 'upsert',
       rowId: 'book-1',
       bookId: 'book-1',
-      payload: { location: '55' },
+      payload: { location: '55', percent: 60 },
     }),
   )
   expect(flushOutbox).toHaveBeenCalled()

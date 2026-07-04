@@ -91,6 +91,20 @@ test('does not render an Offline badge when offlineAvailable is false or omitted
   expect(screen.queryByText('Offline')).not.toBeInTheDocument()
 })
 
+test('shows a completion percent when set (clamped/rounded)', () => {
+  render(
+    <BookCard book={book} coverUrl={null} percent={42} onOpen={vi.fn()} onRename={vi.fn()} onDelete={vi.fn()} />,
+  )
+  expect(screen.getByText('42%')).toBeInTheDocument()
+})
+
+test('shows no percent when it is null or omitted', () => {
+  render(
+    <BookCard book={book} coverUrl={null} percent={null} onOpen={vi.fn()} onRename={vi.fn()} onDelete={vi.fn()} />,
+  )
+  expect(screen.queryByText(/%$/)).not.toBeInTheDocument()
+})
+
 test('clicking Delete opens the confirm dialog and Confirm calls onDelete', async () => {
   const onDelete = vi.fn()
   render(

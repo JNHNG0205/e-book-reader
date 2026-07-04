@@ -5,16 +5,18 @@ import { ConfirmDialog } from '@frontend/components/ConfirmDialog'
 import { OfflineIcon } from '@frontend/reader/icons'
 
 export function BookCard({
-  book, coverUrl, offlineAvailable, onOpen, onRename, onDelete,
+  book, coverUrl, offlineAvailable, percent, onOpen, onRename, onDelete,
 }: {
   book: Book
   coverUrl?: string | null
   offlineAvailable?: boolean
+  percent?: number | null
   onOpen: (id: string) => void
   onRename: (id: string, title: string) => void
   onDelete: (id: string) => void
 }) {
   const [dialog, setDialog] = useState<'none' | 'rename' | 'delete'>('none')
+  const pct = percent == null ? null : Math.max(0, Math.min(100, Math.round(percent)))
 
   return (
     <div className="flex flex-col rounded border p-3">
@@ -39,6 +41,14 @@ export function BookCard({
         {book.title}
       </button>
       {book.author && <div className="text-sm text-gray-500">{book.author}</div>}
+      {pct != null && (
+        <div className="mt-1.5 flex items-center gap-2" aria-label={`${pct}% complete`}>
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-200">
+            <div className="h-full rounded-full bg-blue-500" style={{ width: `${pct}%` }} />
+          </div>
+          <span className="text-xs tabular-nums text-gray-500">{pct}%</span>
+        </div>
+      )}
       <div className="mt-2 flex gap-3 text-sm">
         <button
           className="text-blue-600"

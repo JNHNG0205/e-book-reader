@@ -73,9 +73,10 @@ test('saves the cfi (debounced) when the viewer relocates', async () => {
   vi.useFakeTimers()
   try {
     await act(async () => { render(<EpubReader bookId="b1" fileUrl="https://x/y.epub" onBack={vi.fn()} />) })
+    act(() => { (viewerProps.current?.onProgress as (p: { current: number; total: number }) => void)({ current: 3, total: 10 }) })
     act(() => { (viewerProps.current?.onRelocated as (c: string) => void)('epubcfi(/6/12!/4)') })
     await act(async () => { await vi.advanceTimersByTimeAsync(600) })
-    expect(saveProgress).toHaveBeenCalledWith('b1', 'epubcfi(/6/12!/4)')
+    expect(saveProgress).toHaveBeenCalledWith('b1', 'epubcfi(/6/12!/4)', 30) // 3 of 10
   } finally {
     vi.useRealTimers()
   }

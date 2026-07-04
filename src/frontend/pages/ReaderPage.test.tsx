@@ -120,7 +120,7 @@ test('saves the location when the page changes (debounced)', async () => {
     const next = screen.getByRole('button', { name: /next page/i })
     next.click()
     await vi.advanceTimersByTimeAsync(600)
-    expect(saveProgress).toHaveBeenCalledWith('b1', '2')
+    expect(saveProgress).toHaveBeenCalledWith('b1', '2', 40) // page 2 of 5
   } finally {
     vi.useRealTimers()
   }

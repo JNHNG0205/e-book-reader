@@ -231,11 +231,16 @@ export async function getProgress(bookId: string): Promise<string | null> {
   }
 }
 
-export async function saveProgress(bookId: string, location: string): Promise<void> {
+export async function saveProgress(
+  bookId: string,
+  location: string,
+  percent?: number | null,
+): Promise<void> {
   await upsertCachedRow('progress', bookId, {
     id: bookId,
     book_id: bookId,
     location,
+    percent: percent ?? null,
     updated_at: now(),
   })
   enqueueAndFlush({
@@ -244,7 +249,7 @@ export async function saveProgress(bookId: string, location: string): Promise<vo
     kind: 'upsert',
     rowId: bookId,
     bookId,
-    payload: { location },
+    payload: { location, percent: percent ?? null },
     ts: Date.now(),
   })
 }

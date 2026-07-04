@@ -85,9 +85,10 @@ export function ReaderPage() {
   useEffect(() => {
     if (!bookId || book?.format !== 'pdf') return
     if (!didMount.current) { didMount.current = true; return }
-    const t = setTimeout(() => { void saveProgress(bookId, String(page)) }, 500)
+    const percent = numPages ? Math.round((page / numPages) * 100) : null
+    const t = setTimeout(() => { void saveProgress(bookId, String(page), percent) }, 500)
     return () => clearTimeout(t)
-  }, [bookId, page, book])
+  }, [bookId, page, numPages, book])
 
   useEffect(() => {
     if (book?.format === 'pdf' && numPages && page > numPages) setPage(numPages)

@@ -26,7 +26,7 @@ async function dispatch(op: OutboxOp): Promise<void> {
       else await deleteBookmark(op.rowId)
       return
     case 'progress':
-      await saveProgress(op.bookId, String(op.payload.location))
+      await saveProgress(op.bookId, String(op.payload.location), op.payload.percent as number | null | undefined)
       return
   }
 }

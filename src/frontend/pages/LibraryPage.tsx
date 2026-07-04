@@ -5,6 +5,7 @@ import {
   listBooks, uploadBook, renameBook, deleteBook, getCoverUrl, getBookFileUrl, saveCover,
   updateBookMetadata,
 } from '@backend/data/books'
+import { listProgress } from '@backend/data/progress'
 import { extractCoverBlob } from '@frontend/library/coverExtract'
 import { extractBookMetadata } from '@frontend/library/bookMetadata'
 import { cachedBookIds } from '@frontend/offline/bookCache'
@@ -32,6 +33,7 @@ export function LibraryPage() {
   const [offline, setOffline] = useState(false)
   const [covers, setCovers] = useState<Record<string, string>>({})
   const [offlineIds, setOfflineIds] = useState<Set<string>>(new Set())
+  const [percents, setPercents] = useState<Record<string, number | null>>({})
   const processedCoverIds = useRef(new Set<string>())
 
   const refresh = useCallback(async () => {
@@ -66,6 +68,17 @@ export function LibraryPage() {
       .catch(() => {
         // offline-cache lookup is best-effort; leave badges unset on failure
       })
+  }, [books])
+
+  // Completion percent per book for the library (best-effort; offline just shows none).
+  useEffect(() => {
+    void listProgress()
+      .then((rows) => {
+        const map: Record<string, number | null> = {}
+        for (const r of rows) map[r.book_id] = r.percent
+        setPercents(map)
+      })
+      .catch(() => { /* offline / no session — leave percents unset */ })
   }, [books])
 
   useEffect(() => {
@@ -161,6 +174,7 @@ export function LibraryPage() {
               book={b}
               coverUrl={covers[b.id] ?? null}
               offlineAvailable={offlineIds.has(b.id)}
+              percent={percents[b.id] ?? null}
               onOpen={(id) => navigate('/read/' + id)}
               onRename={handleRename}
               onDelete={handleDelete}
