@@ -61,6 +61,26 @@ test('renders books from the repository', async () => {
   expect(screen.getByText('Herbert')).toBeInTheDocument()
 })
 
+test('filters the library by title/author as you type', async () => {
+  listBooks.mockResolvedValue([
+    { id: 'b1', title: 'Dune', author: 'Herbert', format: 'pdf', cover_path: null, storage_path: 'books/b1.pdf' },
+    { id: 'b2', title: 'Meditations', author: 'Marcus Aurelius', format: 'epub', cover_path: null, storage_path: 'books/b2.epub' },
+  ])
+  render(<MemoryRouter><LibraryPage /></MemoryRouter>)
+  await screen.findByText('Dune')
+
+  await userEvent.type(screen.getByRole('searchbox', { name: /search your library/i }), 'marcus')
+  expect(screen.getByText('Meditations')).toBeInTheDocument()
+  expect(screen.queryByText('Dune')).not.toBeInTheDocument()
+})
+
+test('shows a no-match message when nothing matches the query', async () => {
+  render(<MemoryRouter><LibraryPage /></MemoryRouter>)
+  await screen.findByText('Dune')
+  await userEvent.type(screen.getByRole('searchbox', { name: /search your library/i }), 'zzzz')
+  expect(screen.getByText(/no books match/i)).toBeInTheDocument()
+})
+
 test('uploads a selected pdf file with format inferred from extension', async () => {
   uploadBook.mockResolvedValue({ id: 'b2', title: 'book', author: null, format: 'pdf' })
   render(<MemoryRouter><LibraryPage /></MemoryRouter>)

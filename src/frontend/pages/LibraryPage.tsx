@@ -34,7 +34,13 @@ export function LibraryPage() {
   const [covers, setCovers] = useState<Record<string, string>>({})
   const [offlineIds, setOfflineIds] = useState<Set<string>>(new Set())
   const [percents, setPercents] = useState<Record<string, number | null>>({})
+  const [query, setQuery] = useState('')
   const processedCoverIds = useRef(new Set<string>())
+
+  const q = query.trim().toLowerCase()
+  const shown = q
+    ? books.filter((b) => `${b.title} ${b.author ?? ''}`.toLowerCase().includes(q))
+    : books
 
   const refresh = useCallback(async () => {
     try {
@@ -155,12 +161,29 @@ export function LibraryPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
-      <div className="mb-8 flex items-end justify-between gap-4 border-b border-line pb-6">
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-4 border-b border-line pb-6">
         <div>
           <div className="u-label mb-1.5">Your shelf</div>
           <h2 className="font-serif text-2xl font-semibold tracking-[-0.01em] text-ink">Library</h2>
         </div>
-        <UploadButton onUpload={handleUpload} onReject={setError} />
+        <div className="flex items-center gap-3">
+          {books.length > 0 && (
+            <div className="flex items-center gap-2 rounded-full border border-line bg-paper-raised px-3.5 py-2 focus-within:border-accent">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="h-4 w-4 text-ink-faint">
+                <circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.6" y2="16.6" />
+              </svg>
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                aria-label="Search your library"
+                placeholder="Search your library"
+                className="w-40 bg-transparent text-sm text-ink placeholder:text-ink-faint focus:outline-none sm:w-56"
+              />
+            </div>
+          )}
+          <UploadButton onUpload={handleUpload} onReject={setError} />
+        </div>
       </div>
 
       {error && <p role="alert" className="mb-4 text-sm text-red-700">{error}</p>}
@@ -177,9 +200,11 @@ export function LibraryPage() {
           <p className="font-serif text-lg text-ink">Your shelf is empty.</p>
           <p className="mt-1 text-sm text-ink-soft">Add your first PDF or EPUB to start reading.</p>
         </div>
+      ) : shown.length === 0 ? (
+        <p className="text-ink-soft">No books match “{query.trim()}”.</p>
       ) : (
         <div className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-          {books.map((b) => (
+          {shown.map((b) => (
             <BookCard
               key={b.id}
               book={b}
