@@ -15,9 +15,10 @@ Security (RLS) enforces "each user sees only their own rows." **Never** put a Su
 ## Part A — Supabase production project
 
 1. **Create a project** at https://supabase.com (new project, pick a region near you, set a DB password).
-2. **Apply the schema.** Open **SQL Editor → New query**, paste the entire contents of
-   `supabase/migrations/0001_init.sql`, and run it. This creates the tables + RLS policies +
-   the private `books` Storage bucket + its per-user object policies in one go.
+2. **Apply the schema.** Open **SQL Editor → New query** and run each file in
+   `supabase/migrations/` **in order**: `0001_init.sql` (tables + RLS policies + the private
+   `books` Storage bucket + per-user object policies), then `0002_progress_percent.sql`
+   (adds the library completion-percent column). Run any later-numbered migrations too.
 3. **Verify security (do not skip — RLS *is* the protection):**
    - **Table Editor** → each of `books`, `reading_progress`, `highlights`, `bookmarks` shows
      a shield / "RLS enabled." (Authentication → Policies lists four `own_*` policies each.)
