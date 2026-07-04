@@ -171,6 +171,7 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
         current={progress?.current ?? 0} total={progress?.total ?? 0}
         onPrev={() => viewerRef.current?.prev()}
         onNext={() => viewerRef.current?.next()}
+        onGoToPage={(p) => viewerRef.current?.goToPage(p)}
         onFontSmaller={smaller} onFontLarger={larger}
         onCycleTheme={cycleTheme}
         onBack={onBack}

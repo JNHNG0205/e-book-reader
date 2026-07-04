@@ -1,4 +1,5 @@
 import type { EpubTheme } from './EpubViewer'
+import { PageCounter } from './PageCounter'
 
 export interface EpubToolbarProps {
   fontSize: number
@@ -7,6 +8,7 @@ export interface EpubToolbarProps {
   total: number
   onPrev: () => void
   onNext: () => void
+  onGoToPage: (page: number) => void
   onFontSmaller: () => void
   onFontLarger: () => void
   onCycleTheme: () => void
@@ -14,7 +16,7 @@ export interface EpubToolbarProps {
 }
 
 export function EpubToolbar({
-  fontSize, theme, current, total, onPrev, onNext, onFontSmaller, onFontLarger,
+  fontSize, theme, current, total, onPrev, onNext, onGoToPage, onFontSmaller, onFontLarger,
   onCycleTheme, onBack,
 }: EpubToolbarProps) {
   return (
@@ -29,9 +31,7 @@ export function EpubToolbar({
         <button type="button" aria-label="Previous" onClick={onPrev} className="grid h-7 w-7 place-items-center rounded-full text-ink-soft hover:bg-line-soft">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4"><path d="M15 18l-6-6 6-6" /></svg>
         </button>
-        {total > 0
-          ? <span className="min-w-[4.5rem] text-center font-mono text-[0.8125rem] tabular-nums text-ink">{current} / {total}</span>
-          : <span className="min-w-[4.5rem] text-center text-ink-faint" title="Calculating pages…">…</span>}
+        <PageCounter current={current} total={total} onGoTo={onGoToPage} />
         <button type="button" aria-label="Next" onClick={onNext} className="grid h-7 w-7 place-items-center rounded-full text-ink-soft hover:bg-line-soft">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4"><path d="M9 18l6-6-6-6" /></svg>
         </button>

@@ -176,7 +176,9 @@ export function ReaderPage() {
       {book.format === 'pdf' && (
         <ReaderToolbar
           page={page} numPages={numPages} scale={scale}
-          onPrev={prev} onNext={next} onZoomIn={zoomIn} onZoomOut={zoomOut} onBack={goBack}
+          onPrev={prev} onNext={next} onZoomIn={zoomIn} onZoomOut={zoomOut}
+          onGoToPage={(p) => setPage(Math.max(1, Math.min(numPages || p, p)))}
+          onBack={goBack}
         />
       )}
       <div className="flex flex-1 justify-center overflow-auto bg-[#efece4]">

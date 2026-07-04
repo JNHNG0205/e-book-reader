@@ -1,3 +1,5 @@
+import { PageCounter } from './PageCounter'
+
 export interface ReaderToolbarProps {
   page: number
   numPages: number
@@ -6,11 +8,12 @@ export interface ReaderToolbarProps {
   onNext: () => void
   onZoomIn: () => void
   onZoomOut: () => void
+  onGoToPage: (page: number) => void
   onBack: () => void
 }
 
 export function ReaderToolbar({
-  page, numPages, scale, onPrev, onNext, onZoomIn, onZoomOut, onBack,
+  page, numPages, scale, onPrev, onNext, onZoomIn, onZoomOut, onGoToPage, onBack,
 }: ReaderToolbarProps) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-line bg-paper-raised px-3 py-2 text-sm sm:px-4">
@@ -25,7 +28,7 @@ export function ReaderToolbar({
           type="button" aria-label="Previous page" onClick={onPrev} disabled={page <= 1}
           className="grid h-7 w-7 place-items-center rounded-full text-ink-soft hover:bg-line-soft disabled:opacity-35"
         ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4"><path d="M15 18l-6-6 6-6" /></svg></button>
-        <span className="min-w-[4.5rem] text-center font-mono text-[0.8125rem] tabular-nums text-ink">{page} / {numPages || '…'}</span>
+        <PageCounter current={page} total={numPages} onGoTo={onGoToPage} />
         <button
           type="button" aria-label="Next page" onClick={onNext} disabled={page >= numPages}
           className="grid h-7 w-7 place-items-center rounded-full text-ink-soft hover:bg-line-soft disabled:opacity-35"

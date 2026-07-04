@@ -13,6 +13,8 @@ export interface EpubViewerHandle {
   next: () => void
   prev: () => void
   goTo: (target: string) => void
+  // Jumps to a 1-based "page" (epub.js location index + 1), as shown in the toolbar.
+  goToPage: (page: number) => void
   // Clears the native text selection (called once a highlight is created/cancelled, so
   // the selection stays visible while the color popover is open).
   clearSelection: () => void
@@ -393,6 +395,15 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
       const r = renditionRef.current
       if (!r) return
       void r.display(resolveTocTarget(bookRef.current, target)).catch(() => { /* target unresolved */ })
+    },
+    goToPage: (page: number) => {
+      const r = renditionRef.current
+      const book = bookRef.current
+      if (!r || !book) return
+      // The toolbar "page" is a 1-based location index; map it back to a CFI to display.
+      const locations = book.locations as unknown as { cfiFromLocation: (i: number) => string }
+      const cfi = locations.cfiFromLocation(page - 1)
+      if (cfi) void r.display(cfi).catch(() => { /* out of range */ })
     },
     clearSelection: () => { selectionWindowRef.current?.getSelection()?.removeAllRanges() },
     search: async (query: string): Promise<SearchResult[]> => {

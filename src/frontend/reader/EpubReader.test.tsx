@@ -4,16 +4,16 @@ import { beforeEach, expect, test, vi } from 'vitest'
 
 // Capture the props EpubReader passes to the (mocked) EpubViewer, and expose a way
 // to drive its callbacks. The mock also wires the imperative ref's next/prev.
-const { viewerProps, next, prev, goTo, clearSelection, search } = vi.hoisted(() => ({
+const { viewerProps, next, prev, goTo, goToPage, clearSelection, search } = vi.hoisted(() => ({
   viewerProps: { current: null as Record<string, unknown> | null },
-  next: vi.fn(), prev: vi.fn(), goTo: vi.fn(), clearSelection: vi.fn(), search: vi.fn(),
+  next: vi.fn(), prev: vi.fn(), goTo: vi.fn(), goToPage: vi.fn(), clearSelection: vi.fn(), search: vi.fn(),
 }))
 vi.mock('./EpubViewer', () => ({
   EpubViewer: (props: Record<string, unknown> & { ref?: unknown }) => {
     viewerProps.current = props
     // Assign the imperative handle to the forwarded ref.
     const ref = (props as { ref?: { current: unknown } }).ref
-    if (ref && typeof ref === 'object') ref.current = { next, prev, goTo, clearSelection, search }
+    if (ref && typeof ref === 'object') ref.current = { next, prev, goTo, goToPage, clearSelection, search }
     return <div data-testid="epub-viewer" />
   },
 }))

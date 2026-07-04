@@ -5,12 +5,13 @@ import { ReaderToolbar } from './ReaderToolbar'
 
 const baseProps = {
   page: 2, numPages: 10, scale: 1,
-  onPrev: vi.fn(), onNext: vi.fn(), onZoomIn: vi.fn(), onZoomOut: vi.fn(), onBack: vi.fn(),
+  onPrev: vi.fn(), onNext: vi.fn(), onZoomIn: vi.fn(), onZoomOut: vi.fn(), onGoToPage: vi.fn(), onBack: vi.fn(),
 }
 
-test('shows the current page and total', () => {
+test('shows the current page (editable) and total', () => {
   render(<ReaderToolbar {...baseProps} />)
-  expect(screen.getByText(/2\s*\/\s*10/)).toBeInTheDocument()
+  expect(screen.getByLabelText('Go to page')).toHaveValue('2')
+  expect(screen.getByText('/ 10')).toBeInTheDocument()
 })
 
 test('prev is disabled on the first page', () => {
