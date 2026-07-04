@@ -4,6 +4,7 @@ import {
 import ePub, { type Rendition } from 'epubjs'
 import { flattenToc, type TocItem } from './epubToc'
 import { colorValue } from './highlightColors'
+import { swipeDirection, type Point } from './swipe'
 import { SEARCH_LIMIT, type SearchResult } from './searchTypes'
 
 export type EpubTheme = 'light' | 'dark' | 'sepia'
@@ -276,6 +277,33 @@ function attachSelectionHandler(
   contents.document.addEventListener('touchend', handler)
 }
 
+// Touch events fire inside the section iframe and never reach the host document, so we
+// attach the page-turn swipe here (per section) rather than on the React tree. A swipe is
+// ignored while text is selected, so highlighting a passage doesn't flip the page.
+function attachSwipeHandler(
+  contents: HookContents,
+  turn: { current?: (dir: 'left' | 'right') => void },
+): void {
+  const win = contents.window
+  if (!win) return
+  let start: { pt: Point; t: number } | null = null
+  contents.document.addEventListener('touchstart', (e: Event) => {
+    const t = (e as TouchEvent).touches[0]
+    start = t ? { pt: { x: t.clientX, y: t.clientY }, t: (e as TouchEvent).timeStamp } : null
+  })
+  contents.document.addEventListener('touchend', (e: Event) => {
+    const s = start
+    start = null
+    if (!s) return
+    const sel = win.getSelection() as unknown as { isCollapsed?: boolean } | null
+    if (sel?.isCollapsed === false) return // selecting text, not turning
+    const t = (e as TouchEvent).changedTouches[0]
+    if (!t) return
+    const dir = swipeDirection(s.pt, { x: t.clientX, y: t.clientY }, (e as TouchEvent).timeStamp - s.t)
+    if (dir) turn.current?.(dir)
+  })
+}
+
 // Diffs `highlights` against the ids already applied as epub.js annotations, removing
 // ones that were deleted or recolored and adding new/changed ones — so re-renders don't
 // blindly re-add every highlight (which would leak duplicate marks in the iframe).
@@ -340,6 +368,12 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
   // The window of the section where text was last selected, so clearSelection() can
   // clear it after the color popover is dismissed.
   const selectionWindowRef = useRef<SelectionWindow | null>(null)
+  // Turn the page on a swipe inside the section iframe (left = next, right = prev).
+  const turnRef = useRef<((dir: 'left' | 'right') => void) | undefined>(undefined)
+  turnRef.current = (dir) => {
+    if (dir === 'left') void renditionRef.current?.next()
+    else void renditionRef.current?.prev()
+  }
   const onHighlightClickRef = useRef(onHighlightClick)
   const appliedRef = useRef(new Map<string, AppliedAnnotation>())
   const [error, setError] = useState<string | null>(null)
@@ -423,6 +457,7 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
           // Fire the color popover on mouseup (instant), not epub.js's debounced
           // `selected`. The native selection stays visible until the popover is dismissed.
           attachSelectionHandler(contents, onSelectRef, onDismissRef, selectionWindowRef)
+          attachSwipeHandler(contents, turnRef)
         })
         void rendition.display(initialCfi ?? undefined)
         rendition.on('relocated', (loc: { start: { cfi: string; href?: string } }) => {

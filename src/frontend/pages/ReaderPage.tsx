@@ -224,6 +224,8 @@ export function ReaderPage() {
                   const h = highlights.find((v) => v.id === id)
                   if (h) setPopover({ mode: 'edit', x, y, id, color: h.color, note: h.note })
                 }}
+                onSwipeLeft={next}
+                onSwipeRight={prev}
               />
               {popover && (
                 <HighlightPopover

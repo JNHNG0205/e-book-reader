@@ -93,3 +93,31 @@ test('clicking outside every highlight rect reports nothing', async () => {
   expect(onHighlightClick).not.toHaveBeenCalled()
   vi.restoreAllMocks()
 })
+
+test('a horizontal swipe turns the page; a leftward swipe goes next', () => {
+  vi.spyOn(window, 'getSelection').mockReturnValue({ isCollapsed: true } as unknown as Selection)
+  const onSwipeLeft = vi.fn(); const onSwipeRight = vi.fn()
+  const { container } = render(
+    <PdfViewer fileUrl="https://x/y.pdf" pageNumber={1} scale={1} onNumPages={() => {}}
+      onSwipeLeft={onSwipeLeft} onSwipeRight={onSwipeRight} />,
+  )
+  const wrapper = container.querySelector('[data-pdf-page-wrapper]') as HTMLElement
+  fireEvent.touchStart(wrapper, { touches: [{ clientX: 300, clientY: 100 }] })
+  fireEvent.touchEnd(wrapper, { changedTouches: [{ clientX: 180, clientY: 105 }] })
+  expect(onSwipeLeft).toHaveBeenCalled()
+  expect(onSwipeRight).not.toHaveBeenCalled()
+  vi.restoreAllMocks()
+})
+
+test('an active text selection suppresses the swipe (so highlighting does not turn the page)', () => {
+  vi.spyOn(window, 'getSelection').mockReturnValue({ isCollapsed: false } as unknown as Selection)
+  const onSwipeLeft = vi.fn()
+  const { container } = render(
+    <PdfViewer fileUrl="https://x/y.pdf" pageNumber={1} scale={1} onNumPages={() => {}} onSwipeLeft={onSwipeLeft} />,
+  )
+  const wrapper = container.querySelector('[data-pdf-page-wrapper]') as HTMLElement
+  fireEvent.touchStart(wrapper, { touches: [{ clientX: 300, clientY: 100 }] })
+  fireEvent.touchEnd(wrapper, { changedTouches: [{ clientX: 180, clientY: 105 }] })
+  expect(onSwipeLeft).not.toHaveBeenCalled()
+  vi.restoreAllMocks()
+})

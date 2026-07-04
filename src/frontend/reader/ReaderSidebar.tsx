@@ -12,8 +12,15 @@ export function ReaderSidebar({ tabs, onClose }: { tabs: SidebarTab[]; onClose: 
   const current = tabs.find((t) => t.key === active) ?? tabs[0]
 
   return (
-    <div className="flex w-[27rem] shrink-0 flex-col border-r border-line-soft bg-paper-raised">
-      <div className="flex items-center border-b border-line-soft">
+    <>
+      {/* On phones the panel is a drawer over the page; tap the dimmed area to close. */}
+      <div
+        className="fixed inset-0 z-30 bg-black/30 md:hidden"
+        aria-hidden="true"
+        onClick={onClose}
+      />
+      <div className="fixed inset-y-0 left-0 z-40 flex w-full max-w-[27rem] shrink-0 flex-col border-r border-line-soft bg-paper-raised md:static md:z-auto md:w-[27rem]">
+        <div className="flex items-center border-b border-line-soft">
         <div className="flex min-w-0 flex-1 overflow-x-auto">
           {tabs.map((t) => (
             <button
@@ -42,7 +49,8 @@ export function ReaderSidebar({ tabs, onClose }: { tabs: SidebarTab[]; onClose: 
           </svg>
         </button>
       </div>
-      <div className="min-h-0 flex-1 overflow-auto">{current?.render()}</div>
-    </div>
+        <div className="min-h-0 flex-1 overflow-auto">{current?.render()}</div>
+      </div>
+    </>
   )
 }

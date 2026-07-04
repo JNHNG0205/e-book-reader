@@ -1,8 +1,9 @@
-import { useRef, type MouseEvent as ReactMouseEvent } from 'react'
+import { useRef, type MouseEvent as ReactMouseEvent, type TouchEvent as ReactTouchEvent } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/TextLayer.css'
 import { colorValue } from './highlightColors'
 import { clientRectsToNormalized, type NormRect } from './pdfHighlightGeometry'
+import { swipeDirection, type Point } from './swipe'
 
 // Configure the PDF.js worker (Vite resolves this URL at build time).
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -24,12 +25,33 @@ export interface PdfViewerProps {
   highlights?: PdfViewerHighlight[]
   onSelect?: (sel: { rects: NormRect[]; text: string; x: number; y: number }) => void
   onHighlightClick?: (id: string, x: number, y: number) => void
+  onSwipeLeft?: () => void
+  onSwipeRight?: () => void
 }
 
 export function PdfViewer({
   fileUrl, pageNumber, scale, onNumPages, highlights, onSelect, onHighlightClick,
+  onSwipeLeft, onSwipeRight,
 }: PdfViewerProps) {
   const wrapperRef = useRef<HTMLDivElement>(null)
+  const touchStart = useRef<{ pt: Point; t: number } | null>(null)
+
+  function handleTouchStart(e: ReactTouchEvent) {
+    const t = e.touches[0]
+    touchStart.current = t ? { pt: { x: t.clientX, y: t.clientY }, t: e.timeStamp } : null
+  }
+  function handleTouchEnd(e: ReactTouchEvent) {
+    const start = touchStart.current
+    touchStart.current = null
+    if (!start) return
+    // Don't turn the page if the user was selecting text (to make a highlight).
+    if (!window.getSelection()?.isCollapsed) return
+    const t = e.changedTouches[0]
+    if (!t) return
+    const dir = swipeDirection(start.pt, { x: t.clientX, y: t.clientY }, e.timeStamp - start.t)
+    if (dir === 'left') onSwipeLeft?.()
+    else if (dir === 'right') onSwipeRight?.()
+  }
 
   function handleMouseUp() {
     if (!onSelect || !wrapperRef.current) return
@@ -73,9 +95,11 @@ export function PdfViewer({
       <div
         ref={wrapperRef}
         data-pdf-page-wrapper
-        className="relative inline-block"
+        className="relative inline-block max-w-full"
         onMouseUp={handleMouseUp}
         onClick={handleClick}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
         <Page pageNumber={pageNumber} scale={scale} renderAnnotationLayer={false} />
         {highlights?.flatMap((h) =>

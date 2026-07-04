@@ -2,7 +2,7 @@ import { supabase } from '@backend/supabase'
 
 export function AppHeader() {
   return (
-    <header className="flex items-center justify-between border-b border-line bg-paper-raised px-6 py-3">
+    <header className="flex items-center justify-between border-b border-line bg-paper-raised px-4 py-3 sm:px-6">
       <h1 className="font-serif text-lg font-semibold tracking-[-0.01em] text-ink">
         E-Book <span className="text-accent">Reader</span>
       </h1>
