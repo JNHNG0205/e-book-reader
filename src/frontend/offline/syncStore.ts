@@ -59,6 +59,13 @@ export async function getCachedRows(entity: Entity, bookId: string): Promise<Cac
   return (await (await db()).getAll(ENTITY_CACHE_STORE, cacheKeyRange(entity, bookId))) as CachedRow[]
 }
 
+// All cached rows for an entity across every book (e.g. progress rows for the library).
+export async function getAllCachedRows(entity: Entity): Promise<CachedRow[]> {
+  const prefix = `${entity}:`
+  const range = IDBKeyRange.bound(prefix, `${prefix}￿`)
+  return (await (await db()).getAll(ENTITY_CACHE_STORE, range)) as CachedRow[]
+}
+
 export async function upsertCachedRow(entity: Entity, bookId: string, row: CachedRow): Promise<void> {
   await (await db()).put(ENTITY_CACHE_STORE, row, cacheKey(entity, bookId, row.id))
 }

@@ -6,6 +6,7 @@ import {
   removeOp,
   putCachedRows,
   getCachedRows,
+  getAllCachedRows,
   upsertCachedRow,
   removeCachedRow,
   type OutboxOp,
@@ -95,4 +96,14 @@ test('caches are isolated per (entity, bookId)', async () => {
   expect(await getCachedRows('highlight', 'book-1')).toEqual([{ id: 'r1', v: 'h-book1' }])
   expect(await getCachedRows('bookmark', 'book-1')).toEqual([{ id: 'r1', v: 'bm-book1' }])
   expect(await getCachedRows('highlight', 'book-2')).toEqual([{ id: 'r1', v: 'h-book2' }])
+})
+
+test('getAllCachedRows returns an entity’s rows across all books (and only that entity)', async () => {
+  await upsertCachedRow('progress', 'book-1', { id: 'book-1', percent: 40 })
+  await upsertCachedRow('progress', 'book-2', { id: 'book-2', percent: 90 })
+  await upsertCachedRow('highlight', 'book-1', { id: 'r1', v: 'h' })
+
+  const rows = await getAllCachedRows('progress')
+  expect(rows).toHaveLength(2)
+  expect(rows.map((r) => r.id).sort()).toEqual(['book-1', 'book-2'])
 })

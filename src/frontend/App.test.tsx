@@ -16,8 +16,8 @@ vi.mock('@frontend/library/coverExtract', () => ({
 vi.mock('@frontend/library/bookMetadata', () => ({
   extractBookMetadata: vi.fn().mockResolvedValue({ title: null, author: null }),
 }))
-vi.mock('@backend/data/progress', () => ({
-  listProgress: vi.fn().mockResolvedValue([]),
+vi.mock('@frontend/offline/offlineData', () => ({
+  getAllProgress: vi.fn().mockResolvedValue([]),
 }))
 
 test('renders the app title', () => {

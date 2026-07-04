@@ -31,8 +31,8 @@ vi.mock('@frontend/library/bookMetadata', () => ({ extractBookMetadata }))
 const { cachedBookIds } = vi.hoisted(() => ({ cachedBookIds: vi.fn() }))
 vi.mock('@frontend/offline/bookCache', () => ({ cachedBookIds }))
 
-const { listProgress } = vi.hoisted(() => ({ listProgress: vi.fn() }))
-vi.mock('@backend/data/progress', () => ({ listProgress }))
+const { getAllProgress } = vi.hoisted(() => ({ getAllProgress: vi.fn() }))
+vi.mock('@frontend/offline/offlineData', () => ({ getAllProgress }))
 
 import { LibraryPage } from './LibraryPage'
 
@@ -40,7 +40,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
   cachedBookIds.mockResolvedValue([])
-  listProgress.mockResolvedValue([])
+  getAllProgress.mockResolvedValue([])
   listBooks.mockResolvedValue([
     { id: 'b1', title: 'Dune', author: 'Herbert', format: 'pdf', cover_path: null, storage_path: 'books/b1.pdf' },
   ])
@@ -168,7 +168,7 @@ test('does not mark a book offline-available when its id is not cached', async (
 })
 
 test('shows each book’s completion percent from listProgress', async () => {
-  listProgress.mockResolvedValue([{ book_id: 'b1', percent: 73 }])
+  getAllProgress.mockResolvedValue([{ book_id: 'b1', percent: 73 }])
   render(<MemoryRouter><LibraryPage /></MemoryRouter>)
   await screen.findByText('Dune')
   await waitFor(() => expect(screen.getByText('73%')).toBeInTheDocument())

@@ -5,7 +5,7 @@ import {
   listBooks, uploadBook, renameBook, deleteBook, getCoverUrl, getBookFileUrl, saveCover,
   updateBookMetadata,
 } from '@backend/data/books'
-import { listProgress } from '@backend/data/progress'
+import { getAllProgress } from '@frontend/offline/offlineData'
 import { extractCoverBlob } from '@frontend/library/coverExtract'
 import { extractBookMetadata } from '@frontend/library/bookMetadata'
 import { cachedBookIds } from '@frontend/offline/bookCache'
@@ -70,15 +70,16 @@ export function LibraryPage() {
       })
   }, [books])
 
-  // Completion percent per book for the library (best-effort; offline just shows none).
+  // Completion percent per book for the library — offline-capable (reads the local
+  // progress cache, overlaid with the server list when online).
   useEffect(() => {
-    void listProgress()
+    void getAllProgress()
       .then((rows) => {
         const map: Record<string, number | null> = {}
         for (const r of rows) map[r.book_id] = r.percent
         setPercents(map)
       })
-      .catch(() => { /* offline / no session — leave percents unset */ })
+      .catch(() => { /* best-effort — leave percents unset */ })
   }, [books])
 
   useEffect(() => {

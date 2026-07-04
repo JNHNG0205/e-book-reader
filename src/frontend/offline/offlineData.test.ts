@@ -1,15 +1,16 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import type { CachedRow, OutboxOp } from './syncStore'
 
-const { getCachedRows, putCachedRows, upsertCachedRow, removeCachedRow, enqueueOp, allOps } = vi.hoisted(() => ({
+const { getCachedRows, getAllCachedRows, putCachedRows, upsertCachedRow, removeCachedRow, enqueueOp, allOps } = vi.hoisted(() => ({
   getCachedRows: vi.fn(),
+  getAllCachedRows: vi.fn(),
   putCachedRows: vi.fn(),
   upsertCachedRow: vi.fn(),
   removeCachedRow: vi.fn(),
   enqueueOp: vi.fn(),
   allOps: vi.fn(),
 }))
-vi.mock('./syncStore', () => ({ getCachedRows, putCachedRows, upsertCachedRow, removeCachedRow, enqueueOp, allOps }))
+vi.mock('./syncStore', () => ({ getCachedRows, getAllCachedRows, putCachedRows, upsertCachedRow, removeCachedRow, enqueueOp, allOps }))
 
 const { flushOutbox } = vi.hoisted(() => ({ flushOutbox: vi.fn() }))
 vi.mock('./syncEngine', () => ({ flushOutbox }))
@@ -20,8 +21,8 @@ vi.mock('@backend/data/highlights', () => ({ listHighlights: listHighlightsRemot
 const { listBookmarksRemote } = vi.hoisted(() => ({ listBookmarksRemote: vi.fn() }))
 vi.mock('@backend/data/bookmarks', () => ({ listBookmarks: listBookmarksRemote }))
 
-const { getProgressRemote } = vi.hoisted(() => ({ getProgressRemote: vi.fn() }))
-vi.mock('@backend/data/progress', () => ({ getProgress: getProgressRemote }))
+const { getProgressRemote, listProgressRemote } = vi.hoisted(() => ({ getProgressRemote: vi.fn(), listProgressRemote: vi.fn() }))
+vi.mock('@backend/data/progress', () => ({ getProgress: getProgressRemote, listProgress: listProgressRemote }))
 
 const { getUserIdLocal } = vi.hoisted(() => ({ getUserIdLocal: vi.fn() }))
 vi.mock('@backend/data/currentUser', () => ({ getUserIdLocal }))
@@ -36,6 +37,7 @@ import {
   deleteBookmark,
   getProgress,
   saveProgress,
+  getAllProgress,
 } from './offlineData'
 
 function setOnline(value: boolean): void {
@@ -51,7 +53,42 @@ beforeEach(() => {
   removeCachedRow.mockResolvedValue(undefined)
   enqueueOp.mockResolvedValue(undefined)
   allOps.mockResolvedValue([])
+  getAllCachedRows.mockResolvedValue([])
+  listProgressRemote.mockResolvedValue([])
   setOnline(true)
+})
+
+test('getAllProgress returns cached percents when offline', async () => {
+  setOnline(false)
+  getAllCachedRows.mockResolvedValue([
+    { id: 'b1', book_id: 'b1', percent: 40 },
+    { id: 'b2', book_id: 'b2', percent: 90 },
+  ] as CachedRow[])
+
+  const result = await getAllProgress()
+
+  expect(listProgressRemote).not.toHaveBeenCalled()
+  expect(result).toEqual([
+    { book_id: 'b1', percent: 40 },
+    { book_id: 'b2', percent: 90 },
+  ])
+})
+
+test('getAllProgress overlays the server list and pending ops when online', async () => {
+  getAllCachedRows.mockResolvedValue([{ id: 'b1', book_id: 'b1', percent: 10 }] as CachedRow[])
+  listProgressRemote.mockResolvedValue([
+    { book_id: 'b1', percent: 55 }, // server ahead of the stale cache
+    { book_id: 'b2', percent: 20 },
+  ])
+  allOps.mockResolvedValue([
+    { opId: 'o1', entity: 'progress', kind: 'upsert', rowId: 'b2', bookId: 'b2', payload: { location: '9', percent: 77 }, ts: 1 },
+  ] as OutboxOp[])
+
+  const result = await getAllProgress()
+
+  const map = Object.fromEntries(result.map((r) => [r.book_id, r.percent]))
+  expect(map.b1).toBe(55) // server wins over stale cache
+  expect(map.b2).toBe(77) // unsynced pending op wins over server
 })
 
 afterEach(() => {

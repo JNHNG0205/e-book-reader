@@ -1,5 +1,6 @@
 import {
   getCachedRows,
+  getAllCachedRows,
   putCachedRows,
   upsertCachedRow,
   removeCachedRow,
@@ -12,7 +13,7 @@ import {
 import { flushOutbox } from './syncEngine'
 import { listHighlights as listHighlightsRemote } from '@backend/data/highlights'
 import { listBookmarks as listBookmarksRemote } from '@backend/data/bookmarks'
-import { getProgress as getProgressRemote } from '@backend/data/progress'
+import { getProgress as getProgressRemote, listProgress as listProgressRemote } from '@backend/data/progress'
 import { getUserIdLocal } from '@backend/data/currentUser'
 import type { Highlight, Bookmark } from '@shared/types'
 
@@ -252,4 +253,29 @@ export async function saveProgress(
     payload: { location, percent: percent ?? null },
     ts: Date.now(),
   })
+}
+
+// Completion percent per book for the library — offline-capable. The local cache (written on
+// every saveProgress) is the freshest local value; when online we overlay the server list
+// (cross-device) and then any still-unsynced progress ops so a just-made local change wins.
+export async function getAllProgress(): Promise<Array<{ book_id: string; percent: number | null }>> {
+  const map = new Map<string, number | null>()
+  for (const row of await getAllCachedRows('progress')) {
+    map.set(String(row.book_id ?? row.id), (row.percent as number | null | undefined) ?? null)
+  }
+
+  if (isOnline()) {
+    try {
+      for (const row of await listProgressRemote()) map.set(row.book_id, row.percent)
+      for (const op of await allOps()) {
+        if (op.entity === 'progress' && op.kind === 'upsert') {
+          map.set(op.bookId, (op.payload.percent as number | null | undefined) ?? null)
+        }
+      }
+    } catch {
+      // offline mid-call — keep the cached values
+    }
+  }
+
+  return [...map].map(([book_id, percent]) => ({ book_id, percent }))
 }
