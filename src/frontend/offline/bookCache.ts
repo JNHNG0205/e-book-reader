@@ -1,17 +1,4 @@
-import { openDB, type IDBPDatabase } from 'idb'
-
-const DB_NAME = 'ebook-reader'
-const STORE = 'books' // key: bookId -> value: ArrayBuffer
-
-let dbPromise: Promise<IDBPDatabase> | null = null
-function db(): Promise<IDBPDatabase> {
-  dbPromise ??= openDB(DB_NAME, 1, {
-    upgrade(d) {
-      if (!d.objectStoreNames.contains(STORE)) d.createObjectStore(STORE)
-    },
-  })
-  return dbPromise
-}
+import { db, BOOKS_STORE as STORE } from './db'
 
 export async function putCachedBook(bookId: string, bytes: ArrayBuffer): Promise<void> {
   await (await db()).put(STORE, bytes, bookId)
