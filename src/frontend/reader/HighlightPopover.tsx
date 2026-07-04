@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { HIGHLIGHT_COLORS } from './highlightColors'
+import { CloseIcon } from './icons'
 
 export interface HighlightPopoverProps {
   x: number
@@ -59,7 +60,7 @@ export function HighlightPopover({
           onClick={onClose}
           className="ml-1 grid h-6 w-6 place-items-center rounded-full text-ink-faint hover:bg-line-soft hover:text-ink"
         >
-          ✕
+          <CloseIcon className="h-3.5 w-3.5" />
         </button>
       </div>
       {mode === 'edit' && (

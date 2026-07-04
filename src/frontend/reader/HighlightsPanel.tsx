@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Highlight } from '@shared/types'
 import { HIGHLIGHT_COLORS, colorValue } from './highlightColors'
+import { TrashIcon } from './icons'
 
 export function HighlightsPanel({
   highlights, onJump, onDelete,
@@ -55,9 +56,9 @@ export function HighlightsPanel({
                   type="button"
                   aria-label="Delete highlight"
                   onClick={() => onDelete(hl.id)}
-                  className="text-ink-faint opacity-0 hover:text-red-700 group-hover:opacity-100"
+                  className="mt-0.5 text-ink-faint opacity-0 hover:text-red-700 group-hover:opacity-100"
                 >
-                  ✕
+                  <TrashIcon className="h-4 w-4" />
                 </button>
               </li>
             )

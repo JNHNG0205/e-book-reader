@@ -1,3 +1,5 @@
+import { BookmarkSimple } from '@phosphor-icons/react'
+
 export function BookmarkStar({ active, onToggle }: { active: boolean; onToggle: () => void }) {
   const label = active ? 'Remove bookmark' : 'Add bookmark'
   return (
@@ -11,15 +13,7 @@ export function BookmarkStar({ active, onToggle }: { active: boolean; onToggle: 
         active ? 'text-accent' : 'text-ink-faint hover:text-ink-soft'
       }`}
     >
-      <svg
-        viewBox="0 0 24 24"
-        fill={active ? 'currentColor' : 'none'}
-        stroke="currentColor"
-        strokeWidth={1.7}
-        className="h-5 w-5"
-      >
-        <path d="M6 3h12v18l-6-4-6 4V3z" />
-      </svg>
+      <BookmarkSimple className="h-5 w-5" weight={active ? 'fill' : 'regular'} />
     </button>
   )
 }

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { Book } from '@shared/types'
 import { RenameDialog } from '@frontend/components/RenameDialog'
 import { ConfirmDialog } from '@frontend/components/ConfirmDialog'
-import { OfflineIcon } from '@frontend/reader/icons'
+import { OfflineIcon, CheckIcon } from '@frontend/reader/icons'
 
 // Bookbinding-cloth colours for the fallback cover (a file with no extractable art).
 // Chosen deterministically per book so a title always wears the same cloth.
@@ -74,9 +74,7 @@ export function BookCard({
         )}
         {finished && (
           <span className="absolute bottom-2.5 right-2.5 grid h-6 w-6 place-items-center rounded-full bg-seal text-[#f7efdc] shadow-[0_2px_6px_rgba(0,0,0,0.3)]">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} className="h-3.5 w-3.5">
-              <path d="M5 12l5 5L20 6" />
-            </svg>
+            <CheckIcon className="h-3.5 w-3.5" weight="bold" />
           </span>
         )}
         {offlineAvailable && (

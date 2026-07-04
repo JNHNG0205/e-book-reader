@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { CloseIcon } from './icons'
 
 export interface SidebarTab {
   key: string
@@ -44,9 +45,7 @@ export function ReaderSidebar({ tabs, onClose }: { tabs: SidebarTab[]; onClose: 
           onClick={onClose}
           className="grid h-8 w-8 shrink-0 place-items-center text-ink-soft hover:text-ink"
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="h-4 w-4">
-            <line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" />
-          </svg>
+          <CloseIcon className="h-4 w-4" />
         </button>
       </div>
         <div className="min-h-0 flex-1 overflow-auto">{current?.render()}</div>

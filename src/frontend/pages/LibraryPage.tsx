@@ -11,6 +11,7 @@ import { extractBookMetadata } from '@frontend/library/bookMetadata'
 import { cachedBookIds } from '@frontend/offline/bookCache'
 import { BookCard } from '@frontend/components/BookCard'
 import { UploadButton } from '@frontend/components/UploadButton'
+import { SearchIcon } from '@frontend/reader/icons'
 
 const LIBRARY_CACHE_KEY = 'library.books'
 
@@ -169,9 +170,7 @@ export function LibraryPage() {
         <div className="flex items-center gap-3">
           {books.length > 0 && (
             <div className="flex items-center gap-2 rounded-full border border-line bg-paper-raised px-3.5 py-2 focus-within:border-accent">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="h-4 w-4 text-ink-faint">
-                <circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.6" y2="16.6" />
-              </svg>
+              <SearchIcon className="h-4 w-4 text-ink-faint" />
               <input
                 type="search"
                 value={query}

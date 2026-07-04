@@ -1,4 +1,5 @@
 import type { Bookmark } from '@shared/types'
+import { TrashIcon } from './icons'
 
 export function BookmarksPanel({
   bookmarks, onJump, onDelete,
@@ -23,7 +24,7 @@ export function BookmarksPanel({
             onClick={() => onDelete(b.id)}
             className="text-ink-faint opacity-0 hover:text-red-700 group-hover:opacity-100"
           >
-            ✕
+            <TrashIcon className="h-4 w-4" />
           </button>
         </li>
       ))}
