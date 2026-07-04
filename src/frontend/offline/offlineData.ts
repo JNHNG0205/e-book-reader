@@ -76,7 +76,11 @@ async function listCacheFirst<T>(
 }
 
 function enqueueAndFlush(op: OutboxOp): void {
-  void enqueueOp(op).then(() => flushOutbox().catch(() => {}))
+  // Fire-and-forget: catch the WHOLE chain (an enqueueOp failure, e.g. IndexedDB quota, as
+  // well as flush) so a write never surfaces an unhandled rejection.
+  void enqueueOp(op)
+    .then(() => flushOutbox())
+    .catch(() => {})
 }
 
 // ---- Highlights ----
