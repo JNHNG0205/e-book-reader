@@ -44,3 +44,12 @@ export async function deleteHighlight(id: string): Promise<void> {
   const { error } = await supabase.from('highlights').delete().eq('id', id)
   if (error) throw error
 }
+
+/**
+ * Upserts a full highlight row (including client-generated id/user_id/book_id/timestamps),
+ * so replaying an offline-created row from the outbox is idempotent.
+ */
+export async function upsertHighlight(row: Highlight): Promise<void> {
+  const { error } = await supabase.from('highlights').upsert(row)
+  if (error) throw error
+}

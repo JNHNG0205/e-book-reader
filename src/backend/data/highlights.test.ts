@@ -4,7 +4,7 @@ const { from } = vi.hoisted(() => ({ from: vi.fn() }))
 vi.mock('@backend/supabase', () => ({ supabase: { from } }))
 vi.mock('./currentUser', () => ({ requireUserId: vi.fn().mockResolvedValue('u1') }))
 
-import { listHighlights, saveHighlight, updateHighlight, deleteHighlight } from './highlights'
+import { listHighlights, saveHighlight, updateHighlight, deleteHighlight, upsertHighlight } from './highlights'
 
 beforeEach(() => vi.clearAllMocks())
 
@@ -42,4 +42,38 @@ test('deleteHighlight deletes by id', async () => {
   from.mockReturnValue({ delete: () => ({ eq }) })
   await deleteHighlight('h1')
   expect(eq).toHaveBeenCalledWith('id', 'h1')
+})
+
+test('upsertHighlight upserts the full row', async () => {
+  const upsert = vi.fn().mockResolvedValue({ error: null })
+  from.mockReturnValue({ upsert })
+  const row = {
+    id: 'h1',
+    user_id: 'u1',
+    book_id: 'b1',
+    color: 'yellow',
+    note: null,
+    anchor: { cfiRange: 'epubcfi(/6/4!/2,/1:0,/1:5)', text: 'hello' },
+    created_at: '2026-07-04T00:00:00.000Z',
+    updated_at: '2026-07-04T00:00:00.000Z',
+  }
+  await upsertHighlight(row)
+  expect(upsert).toHaveBeenCalledWith(row)
+})
+
+test('upsertHighlight throws on error', async () => {
+  const upsert = vi.fn().mockResolvedValue({ error: new Error('boom') })
+  from.mockReturnValue({ upsert })
+  await expect(
+    upsertHighlight({
+      id: 'h1',
+      user_id: 'u1',
+      book_id: 'b1',
+      color: 'yellow',
+      note: null,
+      anchor: {},
+      created_at: '2026-07-04T00:00:00.000Z',
+      updated_at: '2026-07-04T00:00:00.000Z',
+    }),
+  ).rejects.toThrow('boom')
 })

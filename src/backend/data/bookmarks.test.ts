@@ -4,7 +4,7 @@ const { from } = vi.hoisted(() => ({ from: vi.fn() }))
 vi.mock('@backend/supabase', () => ({ supabase: { from } }))
 vi.mock('./currentUser', () => ({ requireUserId: vi.fn().mockResolvedValue('u1') }))
 
-import { listBookmarks, saveBookmark, deleteBookmark } from './bookmarks'
+import { listBookmarks, saveBookmark, deleteBookmark, upsertBookmark } from './bookmarks'
 
 beforeEach(() => vi.clearAllMocks())
 
@@ -30,4 +30,36 @@ test('deleteBookmark deletes by id', async () => {
   from.mockReturnValue({ delete: () => ({ eq }) })
   await deleteBookmark('bm1')
   expect(eq).toHaveBeenCalledWith('id', 'bm1')
+})
+
+test('upsertBookmark upserts the full row', async () => {
+  const upsert = vi.fn().mockResolvedValue({ error: null })
+  from.mockReturnValue({ upsert })
+  const row = {
+    id: 'bm1',
+    user_id: 'u1',
+    book_id: 'b1',
+    location: '7',
+    label: 'Page 7',
+    created_at: '2026-07-04T00:00:00.000Z',
+    updated_at: '2026-07-04T00:00:00.000Z',
+  }
+  await upsertBookmark(row)
+  expect(upsert).toHaveBeenCalledWith(row)
+})
+
+test('upsertBookmark throws on error', async () => {
+  const upsert = vi.fn().mockResolvedValue({ error: new Error('boom') })
+  from.mockReturnValue({ upsert })
+  await expect(
+    upsertBookmark({
+      id: 'bm1',
+      user_id: 'u1',
+      book_id: 'b1',
+      location: '7',
+      label: null,
+      created_at: '2026-07-04T00:00:00.000Z',
+      updated_at: '2026-07-04T00:00:00.000Z',
+    }),
+  ).rejects.toThrow('boom')
 })
