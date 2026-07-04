@@ -168,7 +168,21 @@ export function ReaderPage() {
     closePopover()
   }
 
-  if (error) return <div className="p-6 text-red-600" role="alert">{error}</div>
+  if (error) {
+    return (
+      <div className="mx-auto max-w-md px-6 py-16 text-center" role="alert">
+        <p className="font-serif text-lg text-ink">Can’t open this book</p>
+        <p className="mt-1 text-sm text-ink-soft">{error}</p>
+        <button
+          type="button"
+          onClick={goBack}
+          className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-deep"
+        >
+          Back to library
+        </button>
+      </div>
+    )
+  }
   if (!book) return <div className="p-6 text-ink-soft">Loading…</div>
 
   return (

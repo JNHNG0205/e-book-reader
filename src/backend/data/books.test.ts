@@ -70,10 +70,16 @@ test('updateBookMetadata updates the given fields for the id', async () => {
 })
 
 test('getBook returns the row for the id', async () => {
-  const single = vi.fn().mockResolvedValue({ data: { id: 'b1', title: 'T' }, error: null })
-  from.mockReturnValue({ select: () => ({ eq: () => ({ single }) }) })
+  const maybeSingle = vi.fn().mockResolvedValue({ data: { id: 'b1', title: 'T' }, error: null })
+  from.mockReturnValue({ select: () => ({ eq: () => ({ maybeSingle }) }) })
   const book = await getBook('b1')
   expect(book).toEqual({ id: 'b1', title: 'T' })
+})
+
+test('getBook throws a friendly error when the book is missing', async () => {
+  const maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null })
+  from.mockReturnValue({ select: () => ({ eq: () => ({ maybeSingle }) }) })
+  await expect(getBook('gone')).rejects.toThrow(/isn.t in your library/i)
 })
 
 test('getBookFileUrl returns a signed url for the storage path', async () => {

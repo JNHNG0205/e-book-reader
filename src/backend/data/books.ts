@@ -54,8 +54,12 @@ export async function updateBookMetadata(
 }
 
 export async function getBook(id: string): Promise<Book> {
-  const { data, error } = await supabase.from('books').select('*').eq('id', id).single()
+  // maybeSingle so a missing row returns null instead of PostgREST's cryptic
+  // "Cannot coerce the result to a single JSON object" — e.g. a stale library link to a
+  // book that was deleted or belongs to a different project/account.
+  const { data, error } = await supabase.from('books').select('*').eq('id', id).maybeSingle()
   if (error) throw error
+  if (!data) throw new Error('This book isn’t in your library anymore.')
   return data as Book
 }
 
