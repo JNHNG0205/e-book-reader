@@ -98,6 +98,18 @@ function applyLineHeight(rendition: Rendition, lineHeight: number): void {
   themes.override('line-height', String(lineHeight), true)
 }
 
+// Breathing room at the top and bottom of every rendered section. In continuous scroll this
+// whitespace, plus the gap between .epub-view blocks, makes each chapter boundary read as a
+// deliberate "page" separation rather than text running straight into the next chapter.
+const SECTION_PADDING = '2.75rem'
+function applySectionSpacing(rendition: Rendition): void {
+  const themes = rendition.themes as unknown as {
+    override: (name: string, value: string, priority?: boolean) => void
+  }
+  themes.override('padding-top', SECTION_PADDING, true)
+  themes.override('padding-bottom', SECTION_PADDING, true)
+}
+
 const XLINK_NS = 'http://www.w3.org/1999/xlink'
 
 // epub.js substitutes most in-archive resource URLs (e.g. stylesheet <link>s become
@@ -542,6 +554,7 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
         applyEpubTheme(rendition, theme)
         rendition.themes.fontSize(`${fontSize}%`)
         if (lineHeight) applyLineHeight(rendition, lineHeight)
+        applySectionSpacing(rendition)
         const currentBook = book
         // Repair archived <img> references epub.js leaves unresolved. Registered before
         // display() so it also runs for the first rendered section.

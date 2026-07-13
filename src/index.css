@@ -23,11 +23,12 @@
 
   /* Continuous EPUB: epub.js stacks each rendered section (chapter) as an .epub-view block
      in the host document. Reflowable EPUB has no real pages, so the only true seam is the
-     chapter boundary — mark it with a clear gap (the themed reading-region background shows
-     through) and a soft edge shadow so it reads as a deliberate divider, the EPUB analogue
-     of the gap between PDF pages. */
+     chapter boundary — mark it with a generous gap (the themed reading-region background
+     shows through) and a soft edge shadow so it reads as a deliberate divider, the EPUB
+     analogue of the gap between PDF pages. Section-internal top/bottom padding (applied via
+     an epub.js body override) adds to this so each chapter feels like a separated page. */
   .epub-view {
-    margin-bottom: 28px;
+    margin-bottom: 40px;
     box-shadow: 0 3px 14px -6px rgba(27, 26, 23, 0.55);
   }
 }
