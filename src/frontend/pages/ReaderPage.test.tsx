@@ -22,10 +22,10 @@ vi.mock('@frontend/offline/offlineData', () => ({
 const { pdfProps } = vi.hoisted(() => ({ pdfProps: { current: null as Record<string, unknown> | null } }))
 // Mock the PDF viewer so we don't need a real canvas; report 5 pages.
 vi.mock('@frontend/reader/PdfViewer', () => ({
-  PdfViewer: (props: Record<string, unknown> & { pageNumber: number; onNumPages: (n: number) => void }) => {
+  PdfViewer: (props: Record<string, unknown> & { onNumPages: (n: number) => void }) => {
     pdfProps.current = props
     props.onNumPages(5)
-    return <div data-testid="pdf-page">page {props.pageNumber}</div>
+    return <div data-testid="pdf-page" />
   },
 }))
 vi.mock('@frontend/reader/EpubReader', () => ({
@@ -66,16 +66,17 @@ beforeEach(() => {
   searchPdf.mockResolvedValue([])
 })
 
-test('loads the book and renders the first page', async () => {
+test('loads the book and renders the pages', async () => {
   renderAt('b1')
-  expect(await screen.findByTestId('pdf-page')).toHaveTextContent('page 1')
+  await screen.findByTestId('pdf-page')
+  expect(screen.getByLabelText('Go to page')).toHaveValue('1')
 })
 
-test('next page advances the rendered page', async () => {
+test('next page advances the current page', async () => {
   renderAt('b1')
   await screen.findByTestId('pdf-page')
   await userEvent.click(screen.getByRole('button', { name: /next page/i }))
-  expect(screen.getByTestId('pdf-page')).toHaveTextContent('page 2')
+  expect(screen.getByLabelText('Go to page')).toHaveValue('2')
 })
 
 test('renders the EpubReader for an EPUB with its file url', async () => {
@@ -89,7 +90,8 @@ test('renders the EpubReader for an EPUB with its file url', async () => {
 test('resumes to the saved page', async () => {
   getProgress.mockResolvedValue('3')
   renderAt('b1')
-  expect(await screen.findByTestId('pdf-page')).toHaveTextContent('page 3')
+  await screen.findByTestId('pdf-page')
+  await waitFor(() => expect(screen.getByLabelText('Go to page')).toHaveValue('3'))
 })
 
 test('adds a bookmark at the current page via the star toggle', async () => {
@@ -107,7 +109,7 @@ test('opens the sidebar and jumps to a bookmarked page', async () => {
   await screen.findByTestId('pdf-page')
   await userEvent.click(screen.getByRole('button', { name: /menu/i }))
   await userEvent.click(await screen.findByRole('button', { name: 'Page 3' }))
-  expect(screen.getByTestId('pdf-page')).toHaveTextContent('page 3')
+  expect(screen.getByLabelText('Go to page')).toHaveValue('3')
 })
 
 test('saves the location when the page changes (debounced)', async () => {
@@ -177,7 +179,7 @@ test('shows PDF highlights in the Highlights tab and jumps to the page', async (
   await userEvent.click(screen.getByRole('button', { name: /menu/i })) // opens the sidebar
   await userEvent.click(await screen.findByRole('button', { name: 'Highlights' }))
   await userEvent.click(await screen.findByText(/later bit/))
-  expect(screen.getByTestId('pdf-page')).toHaveTextContent('page 4')
+  expect(screen.getByLabelText('Go to page')).toHaveValue('4')
 })
 
 test('searches the PDF from the Search tab and jumps to the result', async () => {
@@ -193,7 +195,7 @@ test('searches the PDF from the Search tab and jumps to the result', async () =>
   await userEvent.click(searchButtons[searchButtons.length - 1])
   await waitFor(() => expect(searchPdf).toHaveBeenCalledWith('https://signed/b1.pdf', 'fox'))
   await userEvent.click(await screen.findByText(/quick brown fox/))
-  expect(screen.getByTestId('pdf-page')).toHaveTextContent('page 2')
+  expect(screen.getByLabelText('Go to page')).toHaveValue('2')
 })
 
 test('shows an offline-unavailable error when loadBookObjectUrl rejects', async () => {

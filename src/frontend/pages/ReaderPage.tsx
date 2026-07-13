@@ -8,7 +8,7 @@ import {
   listBookmarks, saveBookmark, deleteBookmark,
   listHighlights, saveHighlight, updateHighlight, deleteHighlight,
 } from '@frontend/offline/offlineData'
-import { PdfViewer } from '@frontend/reader/PdfViewer'
+import { PdfViewer, type PdfViewerHandle } from '@frontend/reader/PdfViewer'
 import { ReaderToolbar } from '@frontend/reader/ReaderToolbar'
 import { EpubReader } from '@frontend/reader/EpubReader'
 import { ReaderSidebar } from '@frontend/reader/ReaderSidebar'
@@ -31,17 +31,19 @@ export function ReaderPage() {
   const [fileUrl, setFileUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(1)
+  const [initialPage, setInitialPage] = useState(1)
   const [numPages, setNumPages] = useState(0)
   const [scale, setScale] = useState(1)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
   const [highlights, setHighlights] = useState<Highlight[]>([])
   const [popover, setPopover] = useState<null | {
-    mode: 'create' | 'edit'; x: number; y: number; rects?: NormRect[]; text?: string
+    mode: 'create' | 'edit'; x: number; y: number; page?: number; rects?: NormRect[]; text?: string
     id?: string; color?: string; note?: string | null
   }>(null)
 
   const objectUrlRef = useRef<string | null>(null)
+  const viewerRef = useRef<PdfViewerHandle>(null)
 
   useEffect(() => {
     if (!bookId) return
@@ -66,7 +68,8 @@ export function ReaderPage() {
         setFileUrl(objectUrl)
         if (b.format === 'pdf') {
           const saved = await getProgress(bookId)
-          if (active && saved) setPage(Math.max(1, parseInt(saved, 10) || 1))
+          const p = saved ? Math.max(1, parseInt(saved, 10) || 1) : 1
+          if (active && p > 1) { setPage(p); setInitialPage(p) }
         }
       } catch (e) {
         if (active) setError((e as Error).message)
@@ -105,8 +108,15 @@ export function ReaderPage() {
   }, [bookId, book?.format])
 
   const goBack = useCallback(() => navigate('/'), [navigate])
-  const prev = () => setPage((p) => Math.max(1, p - 1))
-  const next = () => setPage((p) => (numPages ? Math.min(numPages, p + 1) : p + 1))
+  // Jumps scroll the page into view; the viewer reports the visible page back via
+  // onVisiblePage, which keeps the counter/progress in sync as the reader also scrolls.
+  const goToPage = (p: number) => {
+    const target = Math.max(1, numPages ? Math.min(numPages, p) : p)
+    setPage(target)
+    viewerRef.current?.scrollToPage(target)
+  }
+  const prev = () => goToPage(page - 1)
+  const next = () => goToPage(page + 1)
   const zoomIn = () => setScale((s) => Math.min(MAX_SCALE, Math.round((s + 0.25) * 100) / 100))
   const zoomOut = () => setScale((s) => Math.max(MIN_SCALE, Math.round((s - 0.25) * 100) / 100))
 
@@ -129,12 +139,18 @@ export function ReaderPage() {
   }
   function jumpToBookmark(location: string) {
     const p = parseInt(location, 10)
-    if (p) setPage(p)
+    if (p) goToPage(p)
   }
 
-  const pageHighlights = highlights
-    .filter((h) => (h.anchor as { page?: number }).page === page)
-    .map((h) => ({ id: h.id, color: h.color, rects: ((h.anchor as { rects?: NormRect[] }).rects) ?? [] }))
+  // Saved highlights grouped by page, so the continuous viewer can overlay each page's own.
+  const highlightsByPage: Record<number, { id: string; color: string; rects: NormRect[] }[]> = {}
+  for (const h of highlights) {
+    const pg = (h.anchor as { page?: number }).page
+    if (!pg) continue
+    ;(highlightsByPage[pg] ??= []).push({
+      id: h.id, color: h.color, rects: ((h.anchor as { rects?: NormRect[] }).rects) ?? [],
+    })
+  }
 
   // Close the popover and clear the browser's lingering text selection (the PDF page +
   // overlays live in the host document, so a plain removeAllRanges works — no iframe).
@@ -145,7 +161,7 @@ export function ReaderPage() {
   async function createHighlight(color: string) {
     if (!popover?.rects) return
     const saved = await saveHighlight(book!.id, {
-      color, anchor: { page, rects: popover.rects, text: popover.text ?? '' },
+      color, anchor: { page: popover.page ?? page, rects: popover.rects, text: popover.text ?? '' },
     })
     setHighlights((prev) => [...prev, saved])
     closePopover()
@@ -191,11 +207,11 @@ export function ReaderPage() {
         <ReaderToolbar
           page={page} numPages={numPages} scale={scale}
           onPrev={prev} onNext={next} onZoomIn={zoomIn} onZoomOut={zoomOut}
-          onGoToPage={(p) => setPage(Math.max(1, Math.min(numPages || p, p)))}
+          onGoToPage={goToPage}
           onBack={goBack}
         />
       )}
-      <div className="flex flex-1 justify-center overflow-auto bg-[#efece4]">
+      <div className="flex min-h-0 flex-1">
         {book.format === 'pdf' && fileUrl ? (
           <>
             {sidebarOpen && (
@@ -208,17 +224,19 @@ export function ReaderPage() {
                   { key: 'highlights', label: 'Highlights', icon: <HighlightIcon />, render: () => (
                     <HighlightsPanel
                       highlights={highlights}
-                      onJump={(h) => { const p = (h.anchor as { page?: number }).page; if (p) setPage(p) }}
+                      onJump={(h) => { const p = (h.anchor as { page?: number }).page; if (p) goToPage(p) }}
                       onDelete={removeHighlight}
                     />
                   ) },
                   { key: 'search', label: 'Search', icon: <SearchIcon />, render: () => (
-                    <SearchPanel onSearch={(q) => searchPdf(fileUrl, q)} onJump={(r) => setPage(Number(r.location))} />
+                    <SearchPanel onSearch={(q) => searchPdf(fileUrl, q)} onJump={(r) => goToPage(Number(r.location))} />
                   ) },
                 ]}
               />
             )}
-            <div className="relative p-4">
+            {/* Reading region is non-scrolling (relative) so the menu/bookmark controls stay
+                pinned while the pages scroll inside the inner container. */}
+            <div className="relative min-h-0 flex-1">
               {!sidebarOpen && (
                 <button
                   type="button"
@@ -232,17 +250,22 @@ export function ReaderPage() {
               <div className="absolute right-3 top-3 z-10">
                 <BookmarkStar active={isBookmarked} onToggle={() => { void toggleBookmark() }} />
               </div>
-              <PdfViewer
-                fileUrl={fileUrl} pageNumber={page} scale={scale} onNumPages={setNumPages}
-                highlights={pageHighlights}
-                onSelect={(s) => setPopover({ mode: 'create', x: s.x, y: s.y, rects: s.rects, text: s.text })}
-                onHighlightClick={(id, x, y) => {
-                  const h = highlights.find((v) => v.id === id)
-                  if (h) setPopover({ mode: 'edit', x, y, id, color: h.color, note: h.note })
-                }}
-                onSwipeLeft={next}
-                onSwipeRight={prev}
-              />
+              <div className="h-full overflow-auto bg-[#efece4]">
+                <div className="flex justify-center px-4">
+                  <PdfViewer
+                    ref={viewerRef}
+                    fileUrl={fileUrl} numPages={numPages} scale={scale} initialPage={initialPage}
+                    onNumPages={setNumPages}
+                    highlightsByPage={highlightsByPage}
+                    onVisiblePage={setPage}
+                    onSelect={(s) => setPopover({ mode: 'create', x: s.x, y: s.y, page: s.page, rects: s.rects, text: s.text })}
+                    onHighlightClick={(id, x, y) => {
+                      const h = highlights.find((v) => v.id === id)
+                      if (h) setPopover({ mode: 'edit', x, y, id, color: h.color, note: h.note })
+                    }}
+                  />
+                </div>
+              </div>
               {popover && (
                 <HighlightPopover
                   key={popover.id ?? 'create'}
@@ -259,7 +282,7 @@ export function ReaderPage() {
         ) : book.format === 'epub' && fileUrl ? (
           <EpubReader bookId={book.id} fileUrl={fileUrl} onBack={goBack} />
         ) : (
-          <div className="p-8 text-gray-500">Loading…</div>
+          <div className="p-8 text-ink-soft">Loading…</div>
         )}
       </div>
     </div>

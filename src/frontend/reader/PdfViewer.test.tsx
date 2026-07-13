@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import { createRef } from 'react'
 import { expect, test, vi } from 'vitest'
 
 vi.mock('react-pdf', () => ({
@@ -15,23 +16,26 @@ vi.mock('react-pdf', () => ({
   ),
 }))
 
-import { PdfViewer } from './PdfViewer'
+import { PdfViewer, type PdfViewerHandle } from './PdfViewer'
 
-test('renders the requested page at the given scale', () => {
-  render(<PdfViewer fileUrl="https://x/y.pdf" pageNumber={3} scale={1.5} onNumPages={() => {}} />)
-  expect(screen.getByTestId('pdf-page')).toHaveTextContent('page 3 @ 1.5')
+test('renders every page at the given scale', () => {
+  render(<PdfViewer fileUrl="https://x/y.pdf" numPages={5} scale={1.5} onNumPages={() => {}} />)
+  const pages = screen.getAllByTestId('pdf-page')
+  expect(pages).toHaveLength(5)
+  expect(pages[0]).toHaveTextContent('page 1 @ 1.5')
+  expect(pages[4]).toHaveTextContent('page 5 @ 1.5')
 })
 
 test('reports the total page count on document load', () => {
   const onNumPages = vi.fn()
-  render(<PdfViewer fileUrl="https://x/y.pdf" pageNumber={1} scale={1} onNumPages={onNumPages} />)
+  render(<PdfViewer fileUrl="https://x/y.pdf" numPages={0} scale={1} onNumPages={onNumPages} />)
   expect(onNumPages).toHaveBeenCalledWith(5)
 })
 
-test('renders highlight overlays as percentage-positioned boxes', () => {
+test('renders a page’s highlight overlays as percentage-positioned boxes', () => {
   const { container } = render(
-    <PdfViewer fileUrl="https://x/y.pdf" pageNumber={1} scale={1} onNumPages={() => {}}
-      highlights={[{ id: 'h1', color: 'yellow', rects: [{ x: 0.1, y: 0.2, w: 0.3, h: 0.05 }] }]} />,
+    <PdfViewer fileUrl="https://x/y.pdf" numPages={2} scale={1} onNumPages={() => {}}
+      highlightsByPage={{ 1: [{ id: 'h1', color: 'yellow', rects: [{ x: 0.1, y: 0.2, w: 0.3, h: 0.05 }] }] }} />,
   )
   const overlay = container.querySelector('[data-highlight-id="h1"]') as HTMLElement
   expect(overlay).not.toBeNull()
@@ -39,85 +43,64 @@ test('renders highlight overlays as percentage-positioned boxes', () => {
   expect(overlay.style.width).toBe('30%')
 })
 
-test('reports a text selection on mouseup', async () => {
+test('reports a text selection with its page on mouseup', () => {
   const onSelect = vi.fn()
-  // Stub the selection + the wrapper geometry.
   vi.spyOn(window, 'getSelection').mockReturnValue({
     isCollapsed: false,
     toString: () => 'picked text',
-    getRangeAt: () => ({
-      getClientRects: () => [{ left: 100, top: 200, width: 200, height: 40 }],
-    }),
+    getRangeAt: () => ({ getClientRects: () => [{ left: 100, top: 200, width: 200, height: 40 }] }),
   } as unknown as Selection)
   const { container } = render(
-    <PdfViewer fileUrl="https://x/y.pdf" pageNumber={1} scale={1} onNumPages={() => {}} onSelect={onSelect} />,
+    <PdfViewer fileUrl="https://x/y.pdf" numPages={2} scale={1} onNumPages={() => {}} onSelect={onSelect} />,
   )
-  const wrapper = container.querySelector('[data-pdf-page-wrapper]') as HTMLElement
+  const wrapper = container.querySelector('[data-page="1"]') as HTMLElement
   vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue({ left: 100, top: 200, width: 400, height: 800 } as DOMRect)
-  wrapper.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }))
+  fireEvent.mouseUp(wrapper)
   expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({
+    page: 1,
     text: 'picked text',
     rects: [{ x: 0, y: 0, w: 0.5, h: 0.05 }],
   }))
   vi.restoreAllMocks()
 })
 
-test('clicking inside a highlight rect reports the highlight id (hit-test)', async () => {
+test('clicking inside a highlight rect reports the highlight id (hit-test)', () => {
   const onHighlightClick = vi.fn()
-  // The overlay is pointer-events:none; the wrapper hit-tests the click against the rects.
   vi.spyOn(window, 'getSelection').mockReturnValue({ isCollapsed: true } as unknown as Selection)
   const { container } = render(
-    <PdfViewer fileUrl="https://x/y.pdf" pageNumber={1} scale={1} onNumPages={() => {}}
-      highlights={[{ id: 'h1', color: 'yellow', rects: [{ x: 0.1, y: 0.1, w: 0.3, h: 0.1 }] }]}
+    <PdfViewer fileUrl="https://x/y.pdf" numPages={2} scale={1} onNumPages={() => {}}
+      highlightsByPage={{ 1: [{ id: 'h1', color: 'yellow', rects: [{ x: 0.1, y: 0.1, w: 0.3, h: 0.1 }] }] }}
       onHighlightClick={onHighlightClick} />,
   )
-  const wrapper = container.querySelector('[data-pdf-page-wrapper]') as HTMLElement
+  const wrapper = container.querySelector('[data-page="1"]') as HTMLElement
   vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, width: 400, height: 800 } as DOMRect)
-  // Click at (80, 120): nx=0.2, ny=0.15 — inside the rect [0.1..0.4, 0.1..0.2].
-  fireEvent.click(wrapper, { clientX: 80, clientY: 120 })
+  fireEvent.click(wrapper, { clientX: 80, clientY: 120 }) // nx=0.2, ny=0.15 — inside
   expect(onHighlightClick).toHaveBeenCalledWith('h1', 80, 120)
   vi.restoreAllMocks()
 })
 
-test('clicking outside every highlight rect reports nothing', async () => {
+test('clicking outside every highlight rect reports nothing', () => {
   const onHighlightClick = vi.fn()
   vi.spyOn(window, 'getSelection').mockReturnValue({ isCollapsed: true } as unknown as Selection)
   const { container } = render(
-    <PdfViewer fileUrl="https://x/y.pdf" pageNumber={1} scale={1} onNumPages={() => {}}
-      highlights={[{ id: 'h1', color: 'yellow', rects: [{ x: 0.1, y: 0.1, w: 0.3, h: 0.1 }] }]}
+    <PdfViewer fileUrl="https://x/y.pdf" numPages={2} scale={1} onNumPages={() => {}}
+      highlightsByPage={{ 1: [{ id: 'h1', color: 'yellow', rects: [{ x: 0.1, y: 0.1, w: 0.3, h: 0.1 }] }] }}
       onHighlightClick={onHighlightClick} />,
   )
-  const wrapper = container.querySelector('[data-pdf-page-wrapper]') as HTMLElement
+  const wrapper = container.querySelector('[data-page="1"]') as HTMLElement
   vi.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, width: 400, height: 800 } as DOMRect)
   fireEvent.click(wrapper, { clientX: 360, clientY: 700 })
   expect(onHighlightClick).not.toHaveBeenCalled()
   vi.restoreAllMocks()
 })
 
-test('a horizontal swipe turns the page; a leftward swipe goes next', () => {
-  vi.spyOn(window, 'getSelection').mockReturnValue({ isCollapsed: true } as unknown as Selection)
-  const onSwipeLeft = vi.fn(); const onSwipeRight = vi.fn()
+test('scrollToPage handle scrolls the requested page into view', () => {
+  const ref = createRef<PdfViewerHandle>()
   const { container } = render(
-    <PdfViewer fileUrl="https://x/y.pdf" pageNumber={1} scale={1} onNumPages={() => {}}
-      onSwipeLeft={onSwipeLeft} onSwipeRight={onSwipeRight} />,
+    <PdfViewer ref={ref} fileUrl="https://x/y.pdf" numPages={3} scale={1} onNumPages={() => {}} />,
   )
-  const wrapper = container.querySelector('[data-pdf-page-wrapper]') as HTMLElement
-  fireEvent.touchStart(wrapper, { touches: [{ clientX: 300, clientY: 100 }] })
-  fireEvent.touchEnd(wrapper, { changedTouches: [{ clientX: 180, clientY: 105 }] })
-  expect(onSwipeLeft).toHaveBeenCalled()
-  expect(onSwipeRight).not.toHaveBeenCalled()
-  vi.restoreAllMocks()
-})
-
-test('an active text selection suppresses the swipe (so highlighting does not turn the page)', () => {
-  vi.spyOn(window, 'getSelection').mockReturnValue({ isCollapsed: false } as unknown as Selection)
-  const onSwipeLeft = vi.fn()
-  const { container } = render(
-    <PdfViewer fileUrl="https://x/y.pdf" pageNumber={1} scale={1} onNumPages={() => {}} onSwipeLeft={onSwipeLeft} />,
-  )
-  const wrapper = container.querySelector('[data-pdf-page-wrapper]') as HTMLElement
-  fireEvent.touchStart(wrapper, { touches: [{ clientX: 300, clientY: 100 }] })
-  fireEvent.touchEnd(wrapper, { changedTouches: [{ clientX: 180, clientY: 105 }] })
-  expect(onSwipeLeft).not.toHaveBeenCalled()
-  vi.restoreAllMocks()
+  const wrapper = container.querySelector('[data-page="2"]') as HTMLElement
+  const spy = vi.spyOn(wrapper, 'scrollIntoView')
+  ref.current?.scrollToPage(2)
+  expect(spy).toHaveBeenCalled()
 })

@@ -89,11 +89,12 @@ export function BookCard({
         <button
           type="button"
           onClick={() => onOpen(book.id)}
-          className="text-left font-serif text-[0.9375rem] font-semibold leading-tight tracking-[-0.005em] text-ink hover:text-accent"
+          title={book.title}
+          className="line-clamp-2 block w-full break-words text-left font-serif text-[0.9375rem] font-semibold leading-tight tracking-[-0.005em] text-ink hover:text-accent"
         >
           {book.title}
         </button>
-        {book.author && <div className="mt-0.5 text-xs text-ink-soft">{book.author}</div>}
+        {book.author && <div className="mt-0.5 truncate text-xs text-ink-soft">{book.author}</div>}
 
         {finished ? (
           <div className="mt-2.5 flex items-center gap-1.5 text-[0.625rem] font-semibold uppercase tracking-wider text-seal">
