@@ -218,6 +218,17 @@ function resolveTocTarget(book: ReturnType<typeof ePub> | null, href: string): s
   }
 }
 
+// Navigate the continuous-scroll rendition to a target (a section href or a CFI). In scrolled
+// mode epub.js often lands at the wrong scroll offset the first time it displays a section
+// that isn't rendered yet — it computes the offset before the section has laid out — so a TOC,
+// bookmark, or scrubber jump appears to do nothing until you click it several times. Displaying
+// a second time, once the section is rendered and measured, corrects the position in one go.
+function displayTarget(rendition: Rendition, target: string): void {
+  void (rendition.display(target) as Promise<unknown>)
+    .then(() => rendition.display(target))
+    .catch(() => { /* target unresolved / out of range */ })
+}
+
 // With screen-sized locations (LOCATION_CHARS), the location index reads as a page
 // number: current = index + 1, total = number of locations.
 function reportProgressForCfi(
@@ -484,7 +495,7 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
     goTo: (target: string) => {
       const r = renditionRef.current
       if (!r) return
-      void r.display(resolveTocTarget(bookRef.current, target)).catch(() => { /* target unresolved */ })
+      displayTarget(r, resolveTocTarget(bookRef.current, target))
     },
     goToPage: (page: number) => {
       const r = renditionRef.current
@@ -493,7 +504,7 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
       // The toolbar "page" is a 1-based location index; map it back to a CFI to display.
       const locations = book.locations as unknown as { cfiFromLocation: (i: number) => string }
       const cfi = locations.cfiFromLocation(page - 1)
-      if (cfi) { currentPageRef.current = page; void r.display(cfi).catch(() => { /* out of range */ }) }
+      if (cfi) { currentPageRef.current = page; displayTarget(r, cfi) }
     },
     clearSelection: () => { selectionWindowRef.current?.getSelection()?.removeAllRanges() },
     search: async (query: string): Promise<SearchResult[]> => {

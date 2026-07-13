@@ -138,8 +138,12 @@ test('goTo navigates directly when the href resolves in the spine', async () => 
       fontSize={100} theme="light" onRelocated={() => {}} onToc={() => {}} />,
   )
   await vi.waitFor(() => expect(rendition.display).toHaveBeenCalled())
+  rendition.display.mockClear()
   ref.current!.goTo('chapter1.xhtml')
   expect(rendition.display).toHaveBeenLastCalledWith('chapter1.xhtml')
+  // Re-displays once the section is laid out, so a continuous-scroll jump lands in one click.
+  await vi.waitFor(() => expect(rendition.display).toHaveBeenCalledTimes(2))
+  expect(rendition.display.mock.calls.every((c) => c[0] === 'chapter1.xhtml')).toBe(true)
 })
 
 test('goTo falls back to the spine item with the same filename when the href does not resolve', async () => {
