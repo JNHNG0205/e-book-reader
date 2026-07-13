@@ -18,10 +18,6 @@ import type { TocItem } from './epubToc'
 import type { Bookmark, Highlight } from '@shared/types'
 import { loadReaderSettings, saveReaderSettings } from './readerSettings'
 
-const THEMES: EpubTheme[] = ['light', 'dark', 'sepia']
-const MIN_FONT = 70
-const MAX_FONT = 200
-
 // Background for the area around the reading column, matched to the theme so the
 // letterbox on wide screens blends with the page instead of showing a bright frame.
 const AREA_BG: Record<EpubTheme, string> = {
@@ -34,7 +30,11 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
   const viewerRef = useRef<EpubViewerHandle>(null)
   const initial = loadReaderSettings()
   const [fontSize, setFontSize] = useState(initial.fontSize)
+  const [lineHeight, setLineHeight] = useState(initial.lineHeight)
+  const [margin, setMargin] = useState(initial.margin)
   const [theme, setTheme] = useState<EpubTheme>(initial.theme)
+  // Immersive reading: a centre tap hides the chrome so only the text shows.
+  const [chromeVisible, setChromeVisible] = useState(true)
   const [toc, setToc] = useState<TocItem[]>([])
   const [tocOpen, setTocOpen] = useState(false)
   const [activeHref, setActiveHref] = useState<string | null>(null)
@@ -61,7 +61,23 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
   }, [bookId])
 
   // Persist settings whenever they change.
-  useEffect(() => { saveReaderSettings({ fontSize, theme }) }, [fontSize, theme])
+  useEffect(() => {
+    saveReaderSettings({ fontSize, theme, lineHeight, margin })
+  }, [fontSize, theme, lineHeight, margin])
+
+  // Keyboard paging (Arrow keys / PageUp-Down) when focus is on the host page. Keys pressed
+  // while focus is inside the section iframe are handled by the viewer's own listener.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      const el = e.target as HTMLElement | null
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
+      if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); viewerRef.current?.next() }
+      else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); viewerRef.current?.prev() }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   // Load bookmarks on mount.
   useEffect(() => { listBookmarks(bookId).then(setBookmarks).catch(() => {}) }, [bookId])
@@ -158,26 +174,45 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
     setBookmarks((prev) => prev.filter((b) => b.id !== id))
   }
 
-  const smaller = () => setFontSize((f) => Math.max(MIN_FONT, f - 10))
-  const larger = () => setFontSize((f) => Math.min(MAX_FONT, f + 10))
-  const cycleTheme = () => setTheme((t) => THEMES[(THEMES.indexOf(t) + 1) % THEMES.length])
+  // The chapter (TOC entry) the reader is currently in, matched to the active section — a
+  // concrete "where am I" that means more in a reflowable book than the synthetic page count.
+  const chapterTitle = useMemo(() => {
+    if (!activeHref) return null
+    const base = activeHref.split('#')[0].split('/').pop()
+    const match = toc.find((t) => t.href === activeHref)
+      ?? toc.find((t) => t.href.split('#')[0].split('/').pop() === base)
+    return match?.label ?? null
+  }, [activeHref, toc])
+
+  // A tap in the book: left/right thirds turn the page, centre toggles chrome. A tap while a
+  // popover is open just dismisses it (don't also turn the page).
+  function handleTapZone(zone: 'left' | 'center' | 'right') {
+    if (popover) { setPopover(null); return }
+    if (zone === 'left') viewerRef.current?.prev()
+    else if (zone === 'right') viewerRef.current?.next()
+    else setChromeVisible((v) => !v)
+  }
 
   if (!ready) return <div className="p-8 text-ink-soft">Loading…</div>
 
   return (
     <div className="flex h-full w-full flex-col">
-      <EpubToolbar
-        fontSize={fontSize} theme={theme}
-        current={progress?.current ?? 0} total={progress?.total ?? 0}
-        onPrev={() => viewerRef.current?.prev()}
-        onNext={() => viewerRef.current?.next()}
-        onGoToPage={(p) => viewerRef.current?.goToPage(p)}
-        onFontSmaller={smaller} onFontLarger={larger}
-        onCycleTheme={cycleTheme}
-        onBack={onBack}
-      />
+      {chromeVisible && (
+        <EpubToolbar
+          fontSize={fontSize} lineHeight={lineHeight} margin={margin} theme={theme}
+          current={progress?.current ?? 0} total={progress?.total ?? 0}
+          chapter={chapterTitle}
+          onPrev={() => viewerRef.current?.prev()}
+          onNext={() => viewerRef.current?.next()}
+          onGoToPage={(p) => viewerRef.current?.goToPage(p)}
+          onSeek={(p) => viewerRef.current?.goToPage(p)}
+          onFontSize={setFontSize} onLineHeight={setLineHeight} onMargin={setMargin}
+          onSetTheme={setTheme}
+          onBack={onBack}
+        />
+      )}
       <div className={`relative flex min-h-0 flex-1 justify-center ${AREA_BG[theme]}`}>
-        {!tocOpen && (
+        {chromeVisible && !tocOpen && (
           <button
             type="button"
             aria-label="Menu"
@@ -187,9 +222,11 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
             <PanelIcon className="h-5 w-5" />
           </button>
         )}
-        <div className="absolute right-3 top-3 z-10">
-          <BookmarkStar active={isBookmarked} onToggle={() => { void toggleBookmark() }} />
-        </div>
+        {chromeVisible && (
+          <div className="absolute right-3 top-3 z-10">
+            <BookmarkStar active={isBookmarked} onToggle={() => { void toggleBookmark() }} />
+          </div>
+        )}
         {tocOpen && (
           <ReaderSidebar
             onClose={() => setTocOpen(false)}
@@ -225,15 +262,18 @@ export function EpubReader({ bookId, fileUrl, onBack }: { bookId: string; fileUr
           />
         )}
         {/* Constrain the reading column to a book-like width so lines don't stretch
-            across a wide desktop; epub.js paginates to this container's width. */}
-        <div className="min-h-0 w-full max-w-2xl">
+            across a wide desktop; epub.js reflows to this container's width. The margin
+            setting adds symmetric horizontal padding (percentage of the column). */}
+        <div className="min-h-0 w-full max-w-2xl" style={{ paddingInline: `${margin}%` }}>
           <EpubViewer
             ref={viewerRef}
             fileUrl={fileUrl}
             bookId={bookId}
             initialCfi={initialCfi}
             fontSize={fontSize}
+            lineHeight={lineHeight}
             theme={theme}
+            onTapZone={handleTapZone}
             onRelocated={onRelocated}
             onToc={setToc}
             onProgress={setProgress}

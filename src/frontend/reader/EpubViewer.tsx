@@ -28,6 +28,8 @@ export interface EpubViewerProps {
   bookId?: string
   initialCfi?: string | null
   fontSize: number
+  // Line spacing multiplier (1.5 = 150%), applied to the book text via a theme override.
+  lineHeight?: number
   theme: EpubTheme
   onRelocated: (cfi: string) => void
   onToc: (toc: TocItem[]) => void
@@ -43,6 +45,9 @@ export interface EpubViewerProps {
   onDismiss?: () => void
   // Fired when a rendered highlight annotation is clicked.
   onHighlightClick?: (id: string, x: number, y: number) => void
+  // Fired on a clean tap (touch) inside the book — left/right thirds turn the page, the
+  // centre toggles chrome. Touch-only so it never fights desktop clicks/selection.
+  onTapZone?: (zone: 'left' | 'center' | 'right') => void
 }
 
 // Generating epub.js "locations" (the index behind the "X / Y" progress count) is slow
@@ -81,6 +86,16 @@ function applyEpubTheme(rendition: Rendition, theme: EpubTheme): void {
   }
   themes.override('color', body.color, true)
   themes.override('background', body.background, true)
+}
+
+// Apply line spacing to the book text. epub.js's themes.override sets the property on each
+// section's <body> with !important, so it wins over the book's own stylesheet and re-applies
+// to newly rendered sections.
+function applyLineHeight(rendition: Rendition, lineHeight: number): void {
+  const themes = rendition.themes as unknown as {
+    override: (name: string, value: string, priority?: boolean) => void
+  }
+  themes.override('line-height', String(lineHeight), true)
 }
 
 const XLINK_NS = 'http://www.w3.org/1999/xlink'
@@ -236,6 +251,8 @@ interface SelectionWindow {
     removeAllRanges: () => void
   } | null
   frameElement?: { getBoundingClientRect: () => { left: number; top: number } } | null
+  // The iframe's own viewport width, used to map a tap's x to a left/centre/right zone.
+  innerWidth?: number
 }
 
 // The `contents` epub.js passes to a content hook — its `window`/`cfiFromRange` are only
@@ -311,6 +328,36 @@ function attachSwipeHandler(
   })
 }
 
+// A quick tap (touch) that didn't move and left no text selected turns the page (left/right
+// third) or toggles chrome (centre). Touch-only: desktop uses the buttons/keyboard/scrubber,
+// and a document-level mouse click would fight text selection and highlight clicks.
+const TAP_MOVE_TOLERANCE = 10 // px — beyond this it's a scroll/swipe, not a tap
+function attachTapHandler(
+  contents: HookContents,
+  onTapRef: { current?: ((zone: 'left' | 'center' | 'right') => void) | undefined },
+): void {
+  const win = contents.window
+  if (!win) return
+  let start: { x: number; y: number } | null = null
+  contents.document.addEventListener('touchstart', (e: Event) => {
+    const t = (e as TouchEvent).touches[0]
+    start = t ? { x: t.clientX, y: t.clientY } : null
+  })
+  contents.document.addEventListener('touchend', (e: Event) => {
+    const s = start
+    start = null
+    if (!s) return
+    const sel = win.getSelection() as unknown as { isCollapsed?: boolean } | null
+    if (sel?.isCollapsed === false) return // selecting text, not tapping
+    const t = (e as TouchEvent).changedTouches[0]
+    if (!t) return
+    if (Math.abs(t.clientX - s.x) > TAP_MOVE_TOLERANCE || Math.abs(t.clientY - s.y) > TAP_MOVE_TOLERANCE) return
+    const width = win.innerWidth || 1
+    const frac = t.clientX / width
+    onTapRef.current?.(frac < 0.33 ? 'left' : frac > 0.66 ? 'right' : 'center')
+  })
+}
+
 // Diffs `highlights` against the ids already applied as epub.js annotations, removing
 // ones that were deleted or recolored and adding new/changed ones — so re-renders don't
 // blindly re-add every highlight (which would leak duplicate marks in the iframe).
@@ -358,8 +405,8 @@ function syncAnnotations(
 
 export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function EpubViewer(
   {
-    fileUrl, bookId, initialCfi, fontSize, theme, onRelocated, onToc, onProgress, onSection,
-    highlights, onSelect, onHighlightClick, onDismiss,
+    fileUrl, bookId, initialCfi, fontSize, lineHeight, theme, onRelocated, onToc, onProgress, onSection,
+    highlights, onSelect, onHighlightClick, onDismiss, onTapZone,
   },
   ref,
 ) {
@@ -406,6 +453,7 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
   const turnRef = useRef<((dir: 'left' | 'right') => void) | undefined>(undefined)
   turnRef.current = (dir) => { stepPage(dir === 'left' ? 1 : -1) }
   const onHighlightClickRef = useRef(onHighlightClick)
+  const onTapZoneRef = useRef(onTapZone)
   const appliedRef = useRef(new Map<string, AppliedAnnotation>())
   const [error, setError] = useState<string | null>(null)
 
@@ -416,6 +464,7 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
   useEffect(() => { onSelectRef.current = onSelect }, [onSelect])
   useEffect(() => { onDismissRef.current = onDismiss }, [onDismiss])
   useEffect(() => { onHighlightClickRef.current = onHighlightClick }, [onHighlightClick])
+  useEffect(() => { onTapZoneRef.current = onTapZone }, [onTapZone])
 
   useImperativeHandle(ref, () => ({
     next: () => stepPage(1),
@@ -492,6 +541,7 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
         bookRef.current = book
         applyEpubTheme(rendition, theme)
         rendition.themes.fontSize(`${fontSize}%`)
+        if (lineHeight) applyLineHeight(rendition, lineHeight)
         const currentBook = book
         // Repair archived <img> references epub.js leaves unresolved. Registered before
         // display() so it also runs for the first rendered section.
@@ -501,6 +551,15 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
           // `selected`. The native selection stays visible until the popover is dismissed.
           attachSelectionHandler(contents, onSelectRef, onDismissRef, selectionWindowRef)
           attachSwipeHandler(contents, turnRef)
+          attachTapHandler(contents, onTapZoneRef)
+          // Arrow/Page keys pressed while focus is inside the section iframe (host-level keys
+          // are handled by EpubReader). Both routes step by one location.
+          contents.document.addEventListener('keydown', (e: Event) => {
+            const ke = e as KeyboardEvent
+            if (ke.metaKey || ke.ctrlKey || ke.altKey) return
+            if (ke.key === 'ArrowRight' || ke.key === 'PageDown') { ke.preventDefault(); stepPage(1) }
+            else if (ke.key === 'ArrowLeft' || ke.key === 'PageUp') { ke.preventDefault(); stepPage(-1) }
+          })
         })
         void rendition.display(initialCfi ?? undefined)
         rendition.on('relocated', (loc: { start: { cfi: string; href?: string } }) => {
@@ -549,6 +608,11 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
 
   // Apply font size when it changes.
   useEffect(() => { renditionRef.current?.themes.fontSize(`${fontSize}%`) }, [fontSize])
+  // Apply line spacing when it changes.
+  useEffect(() => {
+    const r = renditionRef.current
+    if (r && lineHeight) applyLineHeight(r, lineHeight)
+  }, [lineHeight])
   // Apply theme when it changes.
   useEffect(() => {
     const r = renditionRef.current

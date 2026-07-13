@@ -64,6 +64,7 @@ test('Next calls the viewer handle', async () => {
 test('larger font updates the viewer fontSize prop and persists it', async () => {
   await act(async () => { render(<EpubReader bookId="b1" fileUrl="https://x/y.epub" onBack={vi.fn()} />) })
   const before = viewerProps.current?.fontSize as number
+  await userEvent.click(screen.getByRole('button', { name: 'Text settings' }))
   await userEvent.click(screen.getByRole('button', { name: /larger font/i }))
   expect((viewerProps.current?.fontSize as number)).toBeGreaterThan(before)
   expect(JSON.parse(localStorage.getItem('reader.settings')!).fontSize).toBeGreaterThan(before)
@@ -117,6 +118,50 @@ test('Back button calls the provided onBack', async () => {
   await act(async () => { render(<EpubReader bookId="b1" fileUrl="https://x/y.epub" onBack={onBack} />) })
   await userEvent.click(screen.getByRole('button', { name: /library/i }))
   expect(onBack).toHaveBeenCalled()
+})
+
+test('passes line height + margin defaults through to the viewer/column', async () => {
+  await act(async () => { render(<EpubReader bookId="b1" fileUrl="https://x/y.epub" onBack={vi.fn()} />) })
+  expect(viewerProps.current?.lineHeight).toBe(1.5)
+  expect(typeof viewerProps.current?.onTapZone).toBe('function')
+})
+
+test('arrow keys page the book', async () => {
+  await act(async () => { render(<EpubReader bookId="b1" fileUrl="https://x/y.epub" onBack={vi.fn()} />) })
+  await userEvent.keyboard('{ArrowRight}')
+  expect(next).toHaveBeenCalledTimes(1)
+  await userEvent.keyboard('{ArrowLeft}')
+  expect(prev).toHaveBeenCalledTimes(1)
+})
+
+test('tap zones: right turns forward, left back, centre toggles chrome', async () => {
+  await act(async () => { render(<EpubReader bookId="b1" fileUrl="https://x/y.epub" onBack={vi.fn()} />) })
+  const tap = () => viewerProps.current?.onTapZone as (z: 'left' | 'center' | 'right') => void
+
+  act(() => tap()('right'))
+  expect(next).toHaveBeenCalledTimes(1)
+  act(() => tap()('left'))
+  expect(prev).toHaveBeenCalledTimes(1)
+
+  // Centre tap hides the chrome (toolbar), tapping centre again brings it back.
+  expect(screen.getByRole('button', { name: 'Text settings' })).toBeInTheDocument()
+  act(() => tap()('center'))
+  expect(screen.queryByRole('button', { name: 'Text settings' })).not.toBeInTheDocument()
+  act(() => tap()('center'))
+  expect(screen.getByRole('button', { name: 'Text settings' })).toBeInTheDocument()
+})
+
+test('shows the current chapter title from the toc + active section', async () => {
+  await act(async () => { render(<EpubReader bookId="b1" fileUrl="https://x/y.epub" onBack={vi.fn()} />) })
+  // The toc must land first; the section-change handler matches against it.
+  act(() => {
+    (viewerProps.current?.onToc as (t: unknown) => void)([{ label: 'Chapter 5', href: 'text/ch5.xhtml', level: 0 }])
+  })
+  act(() => {
+    (viewerProps.current?.onProgress as (p: { current: number; total: number }) => void)({ current: 5, total: 100 })
+    ;(viewerProps.current?.onSection as (h: string) => void)('text/ch5.xhtml')
+  })
+  expect(await screen.findByText('Chapter 5')).toBeInTheDocument()
 })
 
 test('adds a bookmark at the current cfi via the star toggle', async () => {

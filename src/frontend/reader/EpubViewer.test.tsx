@@ -273,6 +273,41 @@ test('leaves already-resolved (blob:) images untouched', async () => {
   expect(doc.querySelector('img')?.getAttribute('src')).toBe('blob:already-resolved')
 })
 
+test('a clean tap reports a zone from where it landed; a moved tap (scroll) does not', async () => {
+  const onTapZone = vi.fn()
+  render(
+    <EpubViewer fileUrl="https://x/y.epub"
+      fontSize={100} theme="light" onRelocated={() => {}} onToc={() => {}} onTapZone={onTapZone} />,
+  )
+  await vi.waitFor(() => expect(contentHandlers.length).toBeGreaterThan(0))
+
+  const doc = document.implementation.createHTMLDocument('section')
+  // A window with a collapsed selection (no text picked) and a known viewport width.
+  const contents = {
+    document: doc,
+    window: { getSelection: () => ({ isCollapsed: true }), innerWidth: 300 },
+  }
+  contentHandlers[0](contents as never)
+
+  const tap = (startX: number, endX: number, endY = 100) => {
+    const start = new Event('touchstart') as Event & { touches: unknown[] }
+    start.touches = [{ clientX: startX, clientY: 100 }]
+    doc.dispatchEvent(start)
+    const end = new Event('touchend') as Event & { changedTouches: unknown[] }
+    end.changedTouches = [{ clientX: endX, clientY: endY }]
+    doc.dispatchEvent(end)
+  }
+
+  tap(250, 252) // right third (252/300 = 0.84)
+  tap(30, 31) // left third (0.1)
+  tap(150, 151) // centre (0.5)
+  expect(onTapZone.mock.calls.map((c) => c[0])).toEqual(['right', 'left', 'center'])
+
+  onTapZone.mockClear()
+  tap(150, 200) // moved 50px → a scroll/swipe, not a tap
+  expect(onTapZone).not.toHaveBeenCalled()
+})
+
 test('generates and caches locations on first open (no cache)', async () => {
   render(
     <EpubViewer fileUrl="https://x/y.epub" bookId="b1"
