@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type WheelEvent as ReactWheelEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { Book, Bookmark, Highlight } from '@shared/types'
 import { getBook } from '@backend/data/books'
@@ -107,6 +107,25 @@ export function ReaderPage() {
   const goBack = useCallback(() => navigate('/'), [navigate])
   const prev = () => setPage((p) => Math.max(1, p - 1))
   const next = () => setPage((p) => (numPages ? Math.min(numPages, p + 1) : p + 1))
+
+  // Scroll to turn: when the (possibly zoomed) page is scrolled to its bottom edge and the
+  // wheel keeps going down, advance; at the top edge scrolling up goes back. A cooldown
+  // stops one flick from skipping several pages.
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const lastWheelTurn = useRef(0)
+  function onWheelTurn(e: ReactWheelEvent) {
+    if (book?.format !== 'pdf') return
+    const el = scrollRef.current
+    if (!el || !numPages) return
+    if (e.timeStamp - lastWheelTurn.current < 350) return
+    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 2
+    const atTop = el.scrollTop <= 2
+    if (e.deltaY > 0 && atBottom && page < numPages) {
+      setPage((p) => Math.min(numPages, p + 1)); lastWheelTurn.current = e.timeStamp; el.scrollTop = 0
+    } else if (e.deltaY < 0 && atTop && page > 1) {
+      setPage((p) => Math.max(1, p - 1)); lastWheelTurn.current = e.timeStamp; el.scrollTop = 0
+    }
+  }
   const zoomIn = () => setScale((s) => Math.min(MAX_SCALE, Math.round((s + 0.25) * 100) / 100))
   const zoomOut = () => setScale((s) => Math.max(MIN_SCALE, Math.round((s - 0.25) * 100) / 100))
 
@@ -195,7 +214,7 @@ export function ReaderPage() {
           onBack={goBack}
         />
       )}
-      <div className="flex flex-1 justify-center overflow-auto bg-[#efece4]">
+      <div ref={scrollRef} onWheel={onWheelTurn} className="flex flex-1 justify-center overflow-auto bg-[#efece4]">
         {book.format === 'pdf' && fileUrl ? (
           <>
             {sidebarOpen && (

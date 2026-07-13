@@ -306,6 +306,26 @@ function attachSwipeHandler(
   })
 }
 
+// Paginated EPUB pages don't scroll, so a wheel/trackpad gesture would do nothing. Turn the
+// page instead: accumulate scroll delta and flip once past a threshold, with a short cooldown
+// so one gesture doesn't skip several pages. Scroll down → next, up → previous.
+function attachWheelHandler(
+  contents: HookContents,
+  turn: { current?: (dir: 'left' | 'right') => void },
+): void {
+  const THRESHOLD = 40
+  const COOLDOWN = 300
+  let acc = 0
+  let lastTurn = 0
+  contents.document.addEventListener('wheel', (e: Event) => {
+    const we = e as WheelEvent
+    if (we.timeStamp - lastTurn < COOLDOWN) { acc = 0; return }
+    acc += we.deltaY
+    if (acc > THRESHOLD) { turn.current?.('left'); acc = 0; lastTurn = we.timeStamp }
+    else if (acc < -THRESHOLD) { turn.current?.('right'); acc = 0; lastTurn = we.timeStamp }
+  }, { passive: true })
+}
+
 // Diffs `highlights` against the ids already applied as epub.js annotations, removing
 // ones that were deleted or recolored and adding new/changed ones — so re-renders don't
 // blindly re-add every highlight (which would leak duplicate marks in the iframe).
@@ -469,6 +489,7 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
           // `selected`. The native selection stays visible until the popover is dismissed.
           attachSelectionHandler(contents, onSelectRef, onDismissRef, selectionWindowRef)
           attachSwipeHandler(contents, turnRef)
+          attachWheelHandler(contents, turnRef)
         })
         void rendition.display(initialCfi ?? undefined)
         rendition.on('relocated', (loc: { start: { cfi: string; href?: string } }) => {
