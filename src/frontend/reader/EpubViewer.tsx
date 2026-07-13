@@ -1,5 +1,5 @@
 import {
-  forwardRef, useEffect, useImperativeHandle, useRef, useState,
+  forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState,
 } from 'react'
 import ePub, { type Rendition } from 'epubjs'
 import { flattenToc, type TocItem } from './epubToc'
@@ -197,13 +197,18 @@ function reportProgressForCfi(
   book: ReturnType<typeof ePub>,
   cfi: string,
   onProgressRef: { current?: (p: { current: number; total: number }) => void },
+  pageRef?: { current: number },
+  totalRef?: { current: number },
 ) {
-  if (!onProgressRef.current) return
   const total = book.locations.length()
   if (!total) return
   const index = book.locations.locationFromCfi(cfi) as unknown as number
   if (typeof index !== 'number' || Number.isNaN(index)) return
-  onProgressRef.current({ current: index + 1, total })
+  // Track the current/total page so prev/next can step by exactly one location — keeping
+  // these current even when no onProgress consumer is attached.
+  if (pageRef) pageRef.current = index + 1
+  if (totalRef) totalRef.current = total
+  onProgressRef.current?.({ current: index + 1, total })
 }
 
 // Reads the selection rect from the iframe's own document and offsets it by the
@@ -370,12 +375,36 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
   // The window of the section where text was last selected, so clearSelection() can
   // clear it after the color popover is dismissed.
   const selectionWindowRef = useRef<SelectionWindow | null>(null)
-  // Turn the page on a swipe inside the section iframe (left = next, right = prev).
+  // The location index the reader is currently on (1-based), and the total, kept in refs so
+  // prev/next can step deterministically by one location even between renders / rapid taps.
+  const currentPageRef = useRef(1)
+  const totalPagesRef = useRef(0)
+
+  // Move by exactly one "page" (one location = one counter unit). epub.js's own prev()/next()
+  // scroll by a viewport, which spans a variable number of locations, so the counter jumped
+  // erratically. Stepping via cfiFromLocation makes each press change the number by exactly ±1.
+  const stepPage = useCallback((delta: number) => {
+    const r = renditionRef.current
+    const book = bookRef.current
+    const total = totalPagesRef.current
+    if (!r || !book) return
+    if (!total) {
+      // Locations not generated yet — fall back to epub.js's section-based move.
+      if (delta < 0) void r.prev(); else void r.next()
+      return
+    }
+    const target = Math.min(total, Math.max(1, currentPageRef.current + delta))
+    if (target === currentPageRef.current) return
+    currentPageRef.current = target // optimistic, so rapid taps accumulate instead of stalling
+    const locations = book.locations as unknown as { cfiFromLocation: (i: number) => string }
+    const cfi = locations.cfiFromLocation(target - 1)
+    if (cfi) void r.display(cfi).catch(() => { /* out of range */ })
+  }, [])
+
+  // Turn the page on a swipe inside the section iframe (left = next, right = prev) — same
+  // one-location step as the toolbar buttons, so swipe and buttons behave identically.
   const turnRef = useRef<((dir: 'left' | 'right') => void) | undefined>(undefined)
-  turnRef.current = (dir) => {
-    if (dir === 'left') void renditionRef.current?.next()
-    else void renditionRef.current?.prev()
-  }
+  turnRef.current = (dir) => { stepPage(dir === 'left' ? 1 : -1) }
   const onHighlightClickRef = useRef(onHighlightClick)
   const appliedRef = useRef(new Map<string, AppliedAnnotation>())
   const [error, setError] = useState<string | null>(null)
@@ -389,8 +418,8 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
   useEffect(() => { onHighlightClickRef.current = onHighlightClick }, [onHighlightClick])
 
   useImperativeHandle(ref, () => ({
-    next: () => renditionRef.current?.next(),
-    prev: () => renditionRef.current?.prev(),
+    next: () => stepPage(1),
+    prev: () => stepPage(-1),
     goTo: (target: string) => {
       const r = renditionRef.current
       if (!r) return
@@ -403,7 +432,7 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
       // The toolbar "page" is a 1-based location index; map it back to a CFI to display.
       const locations = book.locations as unknown as { cfiFromLocation: (i: number) => string }
       const cfi = locations.cfiFromLocation(page - 1)
-      if (cfi) void r.display(cfi).catch(() => { /* out of range */ })
+      if (cfi) { currentPageRef.current = page; void r.display(cfi).catch(() => { /* out of range */ }) }
     },
     clearSelection: () => { selectionWindowRef.current?.getSelection()?.removeAllRanges() },
     search: async (query: string): Promise<SearchResult[]> => {
@@ -434,7 +463,7 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
       }
       return out
     },
-  }), [])
+  }), [stepPage])
 
   // Create the book + rendition once per file.
   useEffect(() => {
@@ -476,7 +505,7 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
         void rendition.display(initialCfi ?? undefined)
         rendition.on('relocated', (loc: { start: { cfi: string; href?: string } }) => {
           onRelocatedRef.current(loc.start.cfi)
-          reportProgressForCfi(currentBook, loc.start.cfi, onProgressRef)
+          reportProgressForCfi(currentBook, loc.start.cfi, onProgressRef, currentPageRef, totalPagesRef)
           if (loc.start.href) onSectionRef.current?.(loc.start.href)
         })
         appliedRef.current = new Map<string, AppliedAnnotation>()
@@ -504,7 +533,7 @@ export const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(function
           }
           if (cancelled) return
           const loc = rendition.currentLocation() as unknown as { start: { cfi: string } } | undefined
-          if (loc?.start?.cfi) reportProgressForCfi(book, loc.start.cfi, onProgressRef)
+          if (loc?.start?.cfi) reportProgressForCfi(book, loc.start.cfi, onProgressRef, currentPageRef, totalPagesRef)
         } catch {
           // Locations unavailable; skip progress reporting.
         }

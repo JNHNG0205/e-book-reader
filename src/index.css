@@ -21,12 +21,13 @@
     color: theme('colors.ink-faint');
   }
 
-  /* Continuous EPUB: epub.js stacks each rendered section as an .epub-view block in the
-     host document. A small gap (the themed reading-region background shows through) plus a
-     soft edge shadow separates one screen of text from the next, so the reader can see
-     where a section ends — mirroring the gap between PDF pages. */
+  /* Continuous EPUB: epub.js stacks each rendered section (chapter) as an .epub-view block
+     in the host document. Reflowable EPUB has no real pages, so the only true seam is the
+     chapter boundary — mark it with a clear gap (the themed reading-region background shows
+     through) and a soft edge shadow so it reads as a deliberate divider, the EPUB analogue
+     of the gap between PDF pages. */
   .epub-view {
-    margin-bottom: 14px;
-    box-shadow: 0 2px 10px -6px rgba(27, 26, 23, 0.5);
+    margin-bottom: 28px;
+    box-shadow: 0 3px 14px -6px rgba(27, 26, 23, 0.55);
   }
 }

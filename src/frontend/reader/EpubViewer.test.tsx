@@ -38,6 +38,7 @@ const {
       generate: vi.fn().mockResolvedValue([]),
       length: vi.fn(() => 100),
       locationFromCfi: vi.fn(() => 11),
+      cfiFromLocation: vi.fn((i: number) => `epubcfi(loc-${i})`),
       percentageFromCfi: vi.fn(() => 0.42),
       save: vi.fn(() => '["loc1","loc2"]'),
       load: vi.fn(),
@@ -109,19 +110,25 @@ test('creates a book from the fetched bytes and displays the initial cfi', async
   })
 })
 
-test('exposes next/prev via the ref', async () => {
+test('next()/prev() step by exactly one location (deterministic page counter)', async () => {
   const ref = createRef<EpubViewerHandle>()
+  const onProgress = vi.fn()
   render(
     <EpubViewer ref={ref} fileUrl="https://x/y.epub"
-      fontSize={100} theme="light" onRelocated={() => {}} onToc={() => {}} />,
+      fontSize={100} theme="light" onRelocated={() => {}} onToc={() => {}} onProgress={onProgress} />,
   )
-  await vi.waitFor(() => {
-    expect(rendition.display).toHaveBeenCalled()
-  })
-  ref.current!.next()
-  ref.current!.prev()
-  expect(rendition.next).toHaveBeenCalled()
-  expect(rendition.prev).toHaveBeenCalled()
+  // Wait until the location count is known, so stepping uses the location index rather than
+  // falling back to epub.js's viewport-sized (and non-deterministic) prev()/next().
+  await vi.waitFor(() => expect(onProgress).toHaveBeenCalled())
+  const page = onProgress.mock.calls.at(-1)![0].current // 12 (locationFromCfi 11 + 1)
+
+  ref.current!.next() // → page+1: display the CFI at location index (page+1)-1 = page
+  expect(_book.locations.cfiFromLocation).toHaveBeenLastCalledWith(page)
+  expect(rendition.display).toHaveBeenLastCalledWith(`epubcfi(loc-${page})`)
+
+  ref.current!.prev() // → back to page: display the CFI at location index page-1
+  expect(_book.locations.cfiFromLocation).toHaveBeenLastCalledWith(page - 1)
+  expect(rendition.display).toHaveBeenLastCalledWith(`epubcfi(loc-${page - 1})`)
 })
 
 test('goTo navigates directly when the href resolves in the spine', async () => {
