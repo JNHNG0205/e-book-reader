@@ -98,10 +98,11 @@ function applyLineHeight(rendition: Rendition, lineHeight: number): void {
   themes.override('line-height', String(lineHeight), true)
 }
 
-// Breathing room at the top and bottom of every rendered section. In continuous scroll this
-// whitespace, plus the gap between .epub-view blocks, makes each chapter boundary read as a
-// deliberate "page" separation rather than text running straight into the next chapter.
-const SECTION_PADDING = '2.75rem'
+// Breathing room at the top and bottom of every rendered section. This padding is the ONLY
+// source of the chapter gap (there is deliberately no .epub-view margin — see index.css): it
+// lives inside the box epub.js measures, so the continuous manager's scroll compensation stays
+// correct. Two stacked sections give ~2× this as the visible chapter separation.
+const SECTION_PADDING = '3.25rem'
 function applySectionSpacing(rendition: Rendition): void {
   const themes = rendition.themes as unknown as {
     override: (name: string, value: string, priority?: boolean) => void
